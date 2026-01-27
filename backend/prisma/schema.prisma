@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User Management
+// ============================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(viewer)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryEvents InventoryEvent[]
+  requestsCreated Request[]        @relation("RequestCreator")
+
+  @@map("users")
+}
+
+enum Role {
+  admin
+  manager
+  fulfillment
+  viewer
+}
+
+// ============================================
+// Parts Catalog
+// ============================================
+
+model Part {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fitments           PartFitment[]
+  interchangeMembers InterchangeGroupMember[]
+  inventoryEvents    InventoryEvent[]
+  requestItems       RequestItem[]
+
+  @@map("parts")
+}
+
+// ============================================
+// Vehicles (Year >= 2000 enforced in app layer)
+// ============================================
+
+model Vehicle {
+  id        Int      @id @default(autoincrement())
+  year      Int      // Constraint: year >= 2000 enforced in application
+  make      String
+  model     String
+  trim      String?
+  createdAt DateTime @default(now())
+
+  fitments PartFitment[]
+
+  @@unique([year, make, model, trim])
+  @@map("vehicles")
+}
+
+// ============================================
+// Part Fitments (Many-to-Many: Part <-> Vehicle)
+// ============================================
+
+model PartFitment {
+  id        Int      @id @default(autoincrement())
+  partId    Int
+  vehicleId Int
+  createdAt DateTime @default(now())
+
+  part    Part    @relation(fields: [partId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, vehicleId])
+  @@map("part_fitments")
+}
+
+// ============================================
+// Interchangeability Groups
+// ============================================
+
+model InterchangeGroup {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  members InterchangeGroupMember[]
+
+  @@map("interchange_groups")
+}
+
+model InterchangeGroupMember {
+  id        Int      @id @default(autoincrement())
+  groupId   Int
+  partId    Int
+  createdAt DateTime @default(now())
+
+  group InterchangeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  part  Part             @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, partId])
+  @@map("interchange_group_members")
+}
+
+// ============================================
+// Locations (Warehouses, Bins, etc.)
+// ============================================
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  inventoryEvents InventoryEvent[]
+  requestItems    RequestItem[]
+
+  @@map("locations")
+}
+
+// ============================================
+// Inventory Events (Append-Only Ledger)
+// Source of truth for inventory quantities
+// ============================================
+
+model InventoryEvent {
+  id         Int                @id @default(autoincrement())
+  type       InventoryEventType
+  qtyDelta   Int                // positive = increase, negative = decrease
+  partId     Int
+  locationId Int
+  reason     String?            @db.Text
+  requestId  Int?               // links FULFILL events to requests
+  createdBy  Int
+  createdAt  DateTime           @default(now())
+
+  part     Part     @relation(fields: [partId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+  user     User     @relation(fields: [createdBy], references: [id])
+  request  Request? @relation(fields: [requestId], references: [id])
+
+  @@index([partId, locationId])
+  @@index([createdAt])
+  @@map("inventory_events")
+}
+
+enum InventoryEventType {
+  RECEIVE
+  FULFILL
+  RETURN
+  CORRECTION
+}
+
+// ============================================
+// Requests & Request Items
+// ============================================
+
+model Request {
+  id          Int           @id @default(autoincrement())
+  status      RequestStatus @default(PENDING)
+  notes       String?       @db.Text
+  createdBy   Int
+  approvedBy  Int?
+  fulfilledBy Int?
+  createdAt   DateTime      @default(now())
+  approvedAt  DateTime?
+  fulfilledAt DateTime?
+
+  creator         User             @relation("RequestCreator", fields: [createdBy], references: [id])
+  items           RequestItem[]
+  inventoryEvents InventoryEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("requests")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  FULFILLED
+  CANCELLED
+}
+
+model RequestItem {
+  id           Int  @id @default(autoincrement())
+  requestId    Int
+  partId       Int
+  qtyRequested Int
+  qtyFulfilled Int  @default(0)
+  locationId   Int? // target location for fulfillment
+
+  request  Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  part     Part     @relation(fields: [partId], references: [id])
+  location Location? @relation(fields: [locationId], references: [id])
+
+  @@map("request_items")
+}

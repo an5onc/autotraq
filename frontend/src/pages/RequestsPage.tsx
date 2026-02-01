@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api, Part, Location, Request } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
-import { ClipboardList, Plus, Check, Truck, X, Minus } from 'lucide-react';
+import { ClipboardList, Plus, Check, Truck, X, Minus, Ban } from 'lucide-react';
 
 export function RequestsPage() {
   const { isManager, canFulfill } = useAuth();
@@ -49,6 +49,7 @@ export function RequestsPage() {
 
   const handleApprove = async (id: number) => { try { await api.approveRequest(id); loadData(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } };
   const handleFulfill = async (id: number) => { try { await api.fulfillRequest(id); loadData(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } };
+  const handleCancel = async (id: number) => { try { await api.cancelRequest(id); loadData(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } };
 
   const addItem = () => setRequestItems([...requestItems, { partId: '', qty: 1, locationId: '' }]);
   const removeItem = (i: number) => setRequestItems(requestItems.filter((_, idx) => idx !== i));
@@ -145,6 +146,9 @@ export function RequestsPage() {
                           )}
                           {req.status === 'APPROVED' && canFulfill && (
                             <button onClick={() => handleFulfill(req.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-500/10 text-blue-400 rounded-md hover:bg-blue-500/20 transition-colors cursor-pointer"><Truck className="w-3.5 h-3.5" /> Fulfill</button>
+                          )}
+                          {(req.status === 'PENDING' || req.status === 'APPROVED') && isManager && (
+                            <button onClick={() => handleCancel(req.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-500/10 text-red-400 rounded-md hover:bg-red-500/20 transition-colors cursor-pointer"><Ban className="w-3.5 h-3.5" /> Cancel</button>
                           )}
                         </div>
                       </td>

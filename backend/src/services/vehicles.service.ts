@@ -1,5 +1,5 @@
 import prisma from '../repositories/prisma.js';
-import { CreateVehicleInput, VehiclesQuery } from '../schemas/vehicles.schema.js';
+import { CreateVehicleInput, UpdateVehicleInput, VehiclesQuery } from '../schemas/vehicles.schema.js';
 
 // Domain rule: only vehicles year 2000 or newer (per CLAUDE.md Section 3)
 const MIN_YEAR = 2000;
@@ -145,4 +145,68 @@ export async function getDistinctModels(year: number, make: string) {
  */
 export function validateVehicleYear(year: number): boolean {
   return year >= MIN_YEAR;
+}
+
+export async function updateVehicle(id: number, input: UpdateVehicleInput) {
+  // Verify vehicle exists
+  const existing = await prisma.vehicle.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error('Vehicle not found');
+  }
+
+  // Validate year if provided
+  if (input.year !== undefined && input.year < MIN_YEAR) {
+    throw new Error(`Vehicle year must be ${MIN_YEAR} or later`);
+  }
+
+  // Check for duplicates if changing key fields
+  const newYear = input.year ?? existing.year;
+  const newMake = input.make ?? existing.make;
+  const newModel = input.model ?? existing.model;
+  const newTrim = input.trim !== undefined ? input.trim : existing.trim;
+
+  const duplicate = await prisma.vehicle.findFirst({
+    where: {
+      id: { not: id },
+      year: newYear,
+      make: newMake,
+      model: newModel,
+      trim: newTrim || null,
+    },
+  });
+
+  if (duplicate) {
+    throw new Error('A vehicle with these details already exists');
+  }
+
+  return prisma.vehicle.update({
+    where: { id },
+    data: {
+      ...(input.year !== undefined && { year: input.year }),
+      ...(input.make !== undefined && { make: input.make }),
+      ...(input.model !== undefined && { model: input.model }),
+      ...(input.trim !== undefined && { trim: input.trim }),
+    },
+  });
+}
+
+export async function deleteVehicle(id: number) {
+  // Verify vehicle exists
+  const existing = await prisma.vehicle.findUnique({
+    where: { id },
+    include: { fitments: true },
+  });
+
+  if (!existing) {
+    throw new Error('Vehicle not found');
+  }
+
+  // Check if vehicle has fitments - warn but allow deletion
+  if (existing.fitments.length > 0) {
+    // Fitments will be cascade deleted by Prisma schema
+    console.warn(`Deleting vehicle ${id} with ${existing.fitments.length} fitments`);
+  }
+
+  await prisma.vehicle.delete({ where: { id } });
+  return { message: 'Vehicle deleted successfully' };
 }

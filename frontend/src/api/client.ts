@@ -77,9 +77,13 @@ class ApiClient {
   }
 
   // Parts
-  async getParts(search?: string) {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${params}`);
+  async getParts(search?: string, page?: number, limit?: number) {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (page) p.set('page', String(page));
+    if (limit) p.set('limit', String(limit));
+    const qs = p.toString();
+    return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
   }
 
   async createPart(sku: string, name: string, description?: string) {
@@ -158,6 +162,19 @@ class ApiClient {
     });
   }
 
+  async updateVehicle(id: number, data: { year?: number; make?: string; model?: string; trim?: string | null }) {
+    return this.request<Vehicle>(`/vehicles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVehicle(id: number) {
+    return this.request<{ message: string }>(`/vehicles/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Interchange Groups
   async getInterchangeGroups() {
     return this.request<InterchangeGroup[]>('/interchange-groups');
@@ -204,6 +221,13 @@ class ApiClient {
     });
   }
 
+  async returnStock(partId: number, locationId: number, qty: number, reason: string) {
+    return this.request<InventoryEvent>('/inventory/return', {
+      method: 'POST',
+      body: JSON.stringify({ partId, locationId, qty, reason }),
+    });
+  }
+
   async getOnHand(partId?: number, locationId?: number) {
     const params = new URLSearchParams();
     if (partId) params.append('partId', String(partId));
@@ -238,6 +262,12 @@ class ApiClient {
 
   async fulfillRequest(id: number) {
     return this.request<Request>(`/requests/${id}/fulfill`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelRequest(id: number) {
+    return this.request<Request>(`/requests/${id}/cancel`, {
       method: 'POST',
     });
   }

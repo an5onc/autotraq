@@ -4,6 +4,7 @@ import * as inventoryService from '../services/inventory.service.js';
 import {
   ReceiveStockInput,
   CorrectStockInput,
+  ReturnStockInput,
   OnHandQuery,
   EventsQuery,
   CreateLocationInput,
@@ -77,6 +78,27 @@ export async function correctStock(req: AuthenticatedRequest, res: Response) {
       }
     }
     console.error('Correct stock error:', err);
+    serverError(res);
+  }
+}
+
+export async function returnStock(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) {
+      validationError(res, 'User not authenticated');
+      return;
+    }
+    const input: ReturnStockInput = req.body;
+    const event = await inventoryService.returnStock(input, req.user.userId);
+    created(res, event);
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Part not found' || err.message === 'Location not found') {
+        notFound(res, err.message);
+        return;
+      }
+    }
+    console.error('Return stock error:', err);
     serverError(res);
   }
 }

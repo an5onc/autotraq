@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as vehiclesController from '../controllers/vehicles.controller.js';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation.middleware.js';
 import { authenticate, requireManager } from '../middleware/auth.middleware.js';
-import { createVehicleSchema, vehiclesQuerySchema } from '../schemas/vehicles.schema.js';
+import { createVehicleSchema, updateVehicleSchema, vehiclesQuerySchema } from '../schemas/vehicles.schema.js';
 import { idParamSchema } from '../schemas/parts.schema.js';
 
 const router = Router();
@@ -24,5 +24,11 @@ router.get('/models', vehiclesController.getModels);
 
 // GET /api/vehicles/:id - Get vehicle by ID (all authenticated users)
 router.get('/:id', validateParams(idParamSchema), vehiclesController.getVehicleById);
+
+// PUT /api/vehicles/:id - Update vehicle (manager+)
+router.put('/:id', requireManager, validateParams(idParamSchema), validateBody(updateVehicleSchema), vehiclesController.updateVehicle);
+
+// DELETE /api/vehicles/:id - Delete vehicle (manager+)
+router.delete('/:id', requireManager, validateParams(idParamSchema), vehiclesController.deleteVehicle);
 
 export default router;

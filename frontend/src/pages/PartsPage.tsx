@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
-import { Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +13,9 @@ export function PartsPage() {
   const [parts, setParts] = useState<Part[]>([]);
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -125,13 +128,17 @@ export function PartsPage() {
     if (focus === 'search') searchInputRef.current?.focus();
   }, [searchParams]);
 
-  useEffect(() => { loadData(); }, [search]);
+  useEffect(() => { setPage(1); }, [search]);
+
+  useEffect(() => { loadData(); }, [search, page]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [partsData, groupsData] = await Promise.all([api.getParts(search), api.getInterchangeGroups()]);
+      const [partsData, groupsData] = await Promise.all([api.getParts(search, page), api.getInterchangeGroups()]);
       setParts(partsData.parts);
+      setTotalPages(partsData.pagination.totalPages);
+      setTotal(partsData.pagination.total);
       setGroups(groupsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -267,66 +274,93 @@ export function PartsPage() {
               <p className="text-sm text-slate-600 mt-1">Create your first part to get started</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-800">
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
-                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
-                    {isManager && <th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {parts.map((part) => (
-                    <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
-                      <td className="px-8 py-5">
-                        <span className="inline-flex px-4 py-2 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
-                      </td>
-                      <td className="px-8 py-5">
-                        {part.barcodeData ? (
-                          <img
-                            src={`data:image/png;base64,${part.barcodeData}`}
-                            alt="Barcode"
-                            className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={(e) => { e.stopPropagation(); setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! }); }}
-                          />
-                        ) : (
-                          <span className="text-xs text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="px-8 py-5 text-sm text-white font-medium">{part.name}</td>
-                      <td className="px-8 py-5 text-sm text-slate-400">{part.description || '—'}</td>
-                      <td className="px-8 py-5">
-                        {part.fitments && part.fitments.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
-                            <Car className="w-3 h-3" /> {part.fitments.length}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-600">None</span>
-                        )}
-                      </td>
-                      <td className="px-8 py-5 text-sm text-slate-400">
-                        {part.interchangeMembers && part.interchangeMembers.length > 0
-                          ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
-                          : <span className="text-xs text-slate-600">None</span>}
-                      </td>
-                      {isManager && (
-                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
-                          </div>
-                        </td>
-                      )}
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-800">
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
+                      {isManager && <th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {parts.map((part) => (
+                      <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
+                        <td className="px-8 py-5">
+                          <span className="inline-flex px-4 py-2 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
+                        </td>
+                        <td className="px-8 py-5">
+                          {part.barcodeData ? (
+                            <img
+                              src={`data:image/png;base64,${part.barcodeData}`}
+                              alt="Barcode"
+                              className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! }); }}
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-600">—</span>
+                          )}
+                        </td>
+                        <td className="px-8 py-5 text-sm text-white font-medium">{part.name}</td>
+                        <td className="px-8 py-5 text-sm text-slate-400">{part.description || '—'}</td>
+                        <td className="px-8 py-5">
+                          {part.fitments && part.fitments.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
+                              <Car className="w-3 h-3" /> {part.fitments.length}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-600">None</span>
+                          )}
+                        </td>
+                        <td className="px-8 py-5 text-sm text-slate-400">
+                          {part.interchangeMembers && part.interchangeMembers.length > 0
+                            ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
+                            : <span className="text-xs text-slate-600">None</span>}
+                        </td>
+                        {isManager && (
+                          <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                              <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-8 py-5 border-t border-slate-800">
+                  <p className="text-xs text-slate-500">
+                    Page {page} of {totalPages} · {total.toLocaleString()} parts
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                    </button>
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Next <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

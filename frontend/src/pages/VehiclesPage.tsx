@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api, Vehicle } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
-import { Car, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Car, X, Plus, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 
 export function VehiclesPage() {
   const { isManager } = useAuth();
@@ -18,7 +18,11 @@ export function VehiclesPage() {
   const [error, setError] = useState('');
 
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState({ year: 2024, make: '', model: '', trim: '' });
+  const [editForm, setEditForm] = useState({ year: 2024, make: '', model: '', trim: '' });
 
   useEffect(() => {
     const action = searchParams.get('action');
@@ -30,21 +34,22 @@ export function VehiclesPage() {
   useEffect(() => { setPage(1); }, [search]);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getVehicles(search || undefined, page);
-        setVehicles(data.vehicles);
-        setTotalPages(data.pagination.totalPages);
-        setTotal(data.pagination.total);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load vehicles');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadData();
   }, [search, page]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getVehicles(search || undefined, page);
+      setVehicles(data.vehicles);
+      setTotalPages(data.pagination.totalPages);
+      setTotal(data.pagination.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load vehicles');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,12 +57,59 @@ export function VehiclesPage() {
       await api.createVehicle(form.year, form.make, form.model, form.trim || undefined);
       setShowModal(false);
       setForm({ year: 2024, make: '', model: '', trim: '' });
-      setPage(1);
-      setSearch('');
+      loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create vehicle');
     }
   };
+
+  const handleEditVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVehicle) return;
+    try {
+      await api.updateVehicle(selectedVehicle.id, {
+        year: editForm.year,
+        make: editForm.make,
+        model: editForm.model,
+        trim: editForm.trim || null,
+      });
+      setShowEditModal(false);
+      setSelectedVehicle(null);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update vehicle');
+    }
+  };
+
+  const handleDeleteVehicle = async () => {
+    if (!selectedVehicle) return;
+    try {
+      await api.deleteVehicle(selectedVehicle.id);
+      setShowDeleteModal(false);
+      setSelectedVehicle(null);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete vehicle');
+    }
+  };
+
+  const openEditModal = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setEditForm({
+      year: vehicle.year,
+      make: vehicle.make,
+      model: vehicle.model,
+      trim: vehicle.trim || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setShowDeleteModal(true);
+  };
+
+  const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors";
 
   return (
     <Layout>
@@ -82,8 +134,9 @@ export function VehiclesPage() {
         </div>
 
         {error && (
-          <div className="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          <div className="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center justify-between">
             {error}
+            <button onClick={() => setError('')} className="text-red-300 hover:text-red-200 cursor-pointer">×</button>
           </div>
         )}
 
@@ -127,6 +180,7 @@ export function VehiclesPage() {
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Make</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Model</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Trim</th>
+                      {isManager && <th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
@@ -140,6 +194,26 @@ export function VehiclesPage() {
                         <td className="px-8 py-4 text-sm text-white font-medium">{v.make}</td>
                         <td className="px-8 py-4 text-sm text-slate-300">{v.model}</td>
                         <td className="px-8 py-4 text-sm text-slate-400">{v.trim || '—'}</td>
+                        {isManager && (
+                          <td className="px-8 py-4 text-right">
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => openEditModal(v)}
+                                className="p-2 text-slate-400 hover:text-amber-400 bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(v)}
+                                className="p-2 text-slate-400 hover:text-red-400 bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -189,19 +263,19 @@ export function VehiclesPage() {
               <form onSubmit={handleCreateVehicle} className="space-y-5">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Year</label>
-                  <input type="number" className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })} required min={2000} />
+                  <input type="number" className={inputCls} value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })} required min={2000} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Make</label>
-                  <input type="text" className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required placeholder="Ford" />
+                  <input type="text" className={inputCls} value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required placeholder="Ford" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Model</label>
-                  <input type="text" className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required placeholder="F-150" />
+                  <input type="text" className={inputCls} value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required placeholder="F-150" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Trim (optional)</label>
-                  <input type="text" className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors" value={form.trim} onChange={(e) => setForm({ ...form, trim: e.target.value })} placeholder="XLT" />
+                  <input type="text" className={inputCls} value={form.trim} onChange={(e) => setForm({ ...form, trim: e.target.value })} placeholder="XLT" />
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
                   <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer">
@@ -212,6 +286,76 @@ export function VehiclesPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Vehicle Modal */}
+      {showEditModal && selectedVehicle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white">Edit Vehicle</h3>
+              <button onClick={() => setShowEditModal(false)} className="p-1.5 text-slate-500 hover:text-white transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-7 py-6">
+              <form onSubmit={handleEditVehicle} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Year</label>
+                  <input type="number" className={inputCls} value={editForm.year} onChange={(e) => setEditForm({ ...editForm, year: parseInt(e.target.value) })} required min={2000} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Make</label>
+                  <input type="text" className={inputCls} value={editForm.make} onChange={(e) => setEditForm({ ...editForm, make: e.target.value })} required placeholder="Ford" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Model</label>
+                  <input type="text" className={inputCls} value={editForm.model} onChange={(e) => setEditForm({ ...editForm, model: e.target.value })} required placeholder="F-150" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Trim (optional)</label>
+                  <input type="text" className={inputCls} value={editForm.trim} onChange={(e) => setEditForm({ ...editForm, trim: e.target.value })} placeholder="XLT" />
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button type="button" onClick={() => setShowEditModal(false)} className="px-6 py-3 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-6 py-3 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-xl transition-colors cursor-pointer">
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedVehicle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white">Delete Vehicle</h3>
+              <button onClick={() => setShowDeleteModal(false)} className="p-1.5 text-slate-500 hover:text-white transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-7 py-6">
+              <p className="text-sm text-slate-400 mb-6">
+                Are you sure you want to delete <strong className="text-white">{selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}</strong>?
+                This will also remove all associated part fitments.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowDeleteModal(false)} className="px-6 py-3 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={handleDeleteVehicle} className="px-6 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-xl transition-colors cursor-pointer">
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

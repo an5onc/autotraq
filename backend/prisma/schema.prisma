@@ -42,6 +42,8 @@ model Part {
   sku         String   @unique
   name        String
   description String?  @db.Text
+  barcodeData String?  @db.Text @map("barcode_data")
+  skuDecoded  String?  @db.Text @map("sku_decoded")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -193,6 +195,47 @@ enum RequestStatus {
   APPROVED
   FULFILLED
   CANCELLED
+}
+
+// ============================================
+// SKU / Barcode Code Tables
+// ============================================
+
+model MakeCode {
+  id   Int    @id @default(autoincrement())
+  make String @unique
+  code String @db.Char(2) @unique
+
+  @@map("make_codes")
+}
+
+model ModelCode {
+  id    Int    @id @default(autoincrement())
+  make  String
+  model String
+  code  String @db.Char(3)
+
+  @@unique([make, model])
+  @@map("model_codes")
+}
+
+model SystemCode {
+  id          Int    @id @default(autoincrement())
+  name        String
+  code        String @db.Char(2) @unique
+  description String? @db.Text
+
+  @@map("system_codes")
+}
+
+model ComponentCode {
+  id         Int    @id @default(autoincrement())
+  systemCode String @db.Char(2) @map("system_code")
+  name       String
+  code       String @db.Char(2)
+
+  @@unique([systemCode, code])
+  @@map("component_codes")
 }
 
 model RequestItem {

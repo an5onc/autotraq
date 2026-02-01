@@ -18,6 +18,40 @@
 body {
   background: #0f172a;
   color: #e2e8f0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent text clipping */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+
+p, span, td, th, li, label {
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+/* Responsive text */
+@media (max-width: 640px) {
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  table { font-size: 0.8rem; }
+}
+
+/* Table overflow handling */
+table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+td, th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 
 /* Custom utilities */

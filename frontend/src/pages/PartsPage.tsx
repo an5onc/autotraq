@@ -27,7 +27,7 @@ export function PartsPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
 
   // SKU generation state
-  const [useSkuGen, setUseSkuGen] = useState(false);
+  const [useSkuGen, setUseSkuGen] = useState(true);
   const [makeCodes, setMakeCodes] = useState<MakeCode[]>([]);
   const [systemCodes, setSystemCodes] = useState<SystemCode[]>([]);
   const [componentCodes, setComponentCodes] = useState<ComponentCode[]>([]);
@@ -79,11 +79,11 @@ export function PartsPage() {
 
   // Load SKU code tables when modal opens
   useEffect(() => {
-    if (useSkuGen && makeCodes.length === 0) {
+    if (showPartModal && makeCodes.length === 0) {
       api.getMakeCodes().then(setMakeCodes).catch(() => {});
       api.getSystemCodes().then(setSystemCodes).catch(() => {});
     }
-  }, [useSkuGen]);
+  }, [showPartModal]);
 
   // Load components when system changes
   useEffect(() => {
@@ -317,9 +317,12 @@ export function PartsPage() {
       {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(false); }}>
         <form onSubmit={handleCreatePart} className="space-y-4">
           {/* SKU Generation Toggle */}
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs text-slate-500">
+              {useSkuGen ? 'Select vehicle details to auto-generate SKU & barcode' : 'Manually enter a SKU identifier'}
+            </p>
             <button type="button" onClick={() => setUseSkuGen(!useSkuGen)} className={`px-3 py-1.5 text-xs rounded-md border transition-colors cursor-pointer ${useSkuGen ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-              {useSkuGen ? '✓ Auto-Generate SKU' : 'Auto-Generate SKU'}
+              {useSkuGen ? '✓ Auto-Generate SKU' : 'Enter SKU Manually'}
             </button>
           </div>
 

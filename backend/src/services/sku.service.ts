@@ -59,9 +59,37 @@ export async function generateSku(input: SkuInput): Promise<SkuResult> {
   if (!componentEntry) throw new Error(`Unknown component code: ${input.componentCode} in system ${input.systemCode}`);
 
   const yearCode = String(input.year).slice(-2);
-  let sku = `${makeEntry.code}-${modelEntry.code}-${yearCode}-${input.systemCode}${input.componentCode}`;
+  let baseSku = `${makeEntry.code}-${modelEntry.code}-${yearCode}-${input.systemCode}${input.componentCode}`;
   if (input.position) {
-    sku += `-${input.position}`;
+    baseSku += `-${input.position}`;
+  }
+
+  // Check for existing parts with same base SKU and auto-increment sequence
+  const existingParts = await prisma.part.findMany({
+    where: {
+      OR: [
+        { sku: baseSku },
+        { sku: { startsWith: `${baseSku}-` } },
+      ],
+    },
+    select: { sku: true },
+  });
+
+  let sku = baseSku;
+  if (existingParts.length > 0) {
+    // Find the highest sequence number
+    let maxSeq = 0;
+    for (const p of existingParts) {
+      if (p.sku === baseSku) {
+        maxSeq = Math.max(maxSeq, 1); // The original counts as 1
+      }
+      const seqMatch = p.sku.match(new RegExp(`^${baseSku.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d{3})$`));
+      if (seqMatch) {
+        maxSeq = Math.max(maxSeq, parseInt(seqMatch[1], 10));
+      }
+    }
+    const nextSeq = maxSeq + 1;
+    sku = `${baseSku}-${String(nextSeq).padStart(3, '0')}`;
   }
 
   return {

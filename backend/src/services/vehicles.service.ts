@@ -41,17 +41,37 @@ export async function getVehicles(query: VehiclesQuery) {
   const where: Record<string, unknown> = {};
 
   if (search) {
-    const searchConditions: Record<string, unknown>[] = [
-      { make: { contains: search } },
-      { model: { contains: search } },
-      { trim: { contains: search } },
-    ];
-    // If search looks like a year, also match year field
-    const yearNum = parseInt(search, 10);
-    if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
-      searchConditions.push({ year: yearNum });
+    // Split search into tokens so "2014 ford" matches year=2014 AND make=Ford
+    const tokens = search.trim().split(/\s+/).filter(Boolean);
+
+    if (tokens.length > 1) {
+      // Multi-word: AND each token — each must match at least one field
+      const andConditions = tokens.map(token => {
+        const conditions: Record<string, unknown>[] = [
+          { make: { contains: token } },
+          { model: { contains: token } },
+          { trim: { contains: token } },
+        ];
+        const yearNum = parseInt(token, 10);
+        if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
+          conditions.push({ year: yearNum });
+        }
+        return { OR: conditions };
+      });
+      where.AND = andConditions;
+    } else {
+      // Single word: OR across all fields
+      const searchConditions: Record<string, unknown>[] = [
+        { make: { contains: search } },
+        { model: { contains: search } },
+        { trim: { contains: search } },
+      ];
+      const yearNum = parseInt(search, 10);
+      if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
+        searchConditions.push({ year: yearNum });
+      }
+      where.OR = searchConditions;
     }
-    where.OR = searchConditions;
   }
 
   if (year) where.year = year;

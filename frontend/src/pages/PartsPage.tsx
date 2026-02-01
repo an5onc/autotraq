@@ -238,14 +238,13 @@ export function PartsPage() {
 
         {/* Search */}
         <div className="relative mb-8">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
           <input
             ref={searchInputRef}
             type="text"
             placeholder="Search by SKU, name, or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors text-sm"
+            className="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors text-sm"
           />
           {search && (
             <button

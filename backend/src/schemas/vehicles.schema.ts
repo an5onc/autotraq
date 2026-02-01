@@ -22,7 +22,7 @@ export const vehiclesQuerySchema = z.object({
   make: z.string().optional(),
   model: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(1000).optional().default(1000),
 });
 
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;

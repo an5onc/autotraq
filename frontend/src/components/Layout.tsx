@@ -1,86 +1,238 @@
-import { ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { ReactNode, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine } from 'lucide-react';
+import {
+  Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine,
+  PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
+  Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { to: '/parts', icon: Wrench, label: 'Parts' },
-  { to: '/vehicles', icon: Car, label: 'Vehicles' },
-  { to: '/inventory', icon: Package, label: 'Inventory' },
-  { to: '/requests', icon: ClipboardList, label: 'Requests' },
-  { to: '/scan', icon: ScanLine, label: 'Scan' },
+interface SubItem {
+  label: string;
+  to: string;
+  icon: React.ElementType;
+}
+
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  subItems?: SubItem[];
+}
+
+const navItems: NavItem[] = [
+  {
+    to: '/parts',
+    icon: Wrench,
+    label: 'Parts',
+    subItems: [
+      { label: 'Catalog', to: '/parts', icon: List },
+      { label: 'Search Parts', to: '/parts?focus=search', icon: Search },
+      { label: 'New Part', to: '/parts?action=new', icon: Plus },
+      { label: 'Interchange', to: '/parts?view=groups', icon: GitCompare },
+    ],
+  },
+  {
+    to: '/vehicles',
+    icon: Car,
+    label: 'Vehicles',
+    subItems: [
+      { label: 'All Vehicles', to: '/vehicles', icon: List },
+      { label: 'Search Vehicles', to: '/vehicles?focus=search', icon: Search },
+      { label: 'New Vehicle', to: '/vehicles?action=new', icon: Plus },
+      { label: 'Fitments', to: '/vehicles?view=fitments', icon: Truck },
+    ],
+  },
+  {
+    to: '/inventory',
+    icon: Package,
+    label: 'Inventory',
+    subItems: [
+      { label: 'Overview', to: '/inventory', icon: BarChart2 },
+      { label: 'Search Inventory', to: '/inventory?focus=search', icon: Search },
+      { label: 'Transactions', to: '/inventory?view=events', icon: ArrowDownUp },
+    ],
+  },
+  {
+    to: '/requests',
+    icon: ClipboardList,
+    label: 'Requests',
+    subItems: [
+      { label: 'All Requests', to: '/requests', icon: List },
+      { label: 'New Request', to: '/requests?action=new', icon: Plus },
+    ],
+  },
+  {
+    to: '/scan',
+    icon: ScanLine,
+    label: 'Scan',
+    subItems: [
+      { label: 'Camera Scan', to: '/scan?mode=camera', icon: Camera },
+      { label: 'USB Scanner', to: '/scan?mode=usb', icon: Usb },
+      { label: 'SKU Lookup', to: '/scan?mode=manual', icon: Search },
+    ],
+  },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    // Auto-expand the active section
+    const active = navItems.find(item => location.pathname.startsWith(item.to));
+    return new Set(active ? [active.to] : []);
+  });
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const toggleSection = (to: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(to)) next.delete(to);
+      else next.add(to);
+      return next;
+    });
+  };
+
+  const isActiveSection = (to: string) => location.pathname.startsWith(to);
+
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+      <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}>
         {/* Logo */}
-        <div className="p-6 border-b border-slate-800">
+        <div className={`${collapsed ? 'p-3' : 'p-5'} border-b border-slate-800`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+            <div className={`${collapsed ? 'w-10 h-10' : 'w-10 h-10'} bg-amber-500 rounded-lg flex items-center justify-center shrink-0`}>
               <BarChart3 className="w-6 h-6 text-slate-900" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white tracking-wider">AUTOTRAQ</h1>
-              <p className="text-[10px] text-slate-500 tracking-widest uppercase">Inventory System</p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-white tracking-wider">AUTOTRAQ</h1>
+                <p className="text-[10px] text-slate-500 tracking-widest uppercase">Inventory System</p>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Collapse toggle */}
+        <div className={`${collapsed ? 'px-3 py-2' : 'px-4 py-2'} border-b border-slate-800/50`}>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors cursor-pointer"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4 mx-auto" />
+            ) : (
+              <>
+                <PanelLeftClose className="w-4 h-4" />
+                <span>Hide</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`
-              }
-            >
-              <Icon className="w-5 h-5" />
-              {label}
-            </NavLink>
-          ))}
+        <nav className={`flex-1 ${collapsed ? 'p-2' : 'p-3'} space-y-0.5 overflow-y-auto`}>
+          {navItems.map(({ to, icon: Icon, label, subItems }) => {
+            const active = isActiveSection(to);
+            const expanded = expandedSections.has(to) && !collapsed;
+
+            return (
+              <div key={to}>
+                {/* Main nav item */}
+                <div className="flex items-center">
+                  <NavLink
+                    to={to}
+                    onClick={(e) => {
+                      if (!collapsed && subItems) {
+                        e.preventDefault();
+                        toggleSection(to);
+                      }
+                    }}
+                    className={`flex items-center gap-3 flex-1 ${collapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5'} rounded-lg text-sm font-medium transition-all duration-200 ${
+                      active
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                    title={collapsed ? label : undefined}
+                  >
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{label}</span>
+                        {subItems && (
+                          expanded
+                            ? <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                            : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                </div>
+
+                {/* Sub-items */}
+                {expanded && subItems && (
+                  <div className="ml-4 pl-4 border-l border-slate-800 mt-0.5 mb-1 space-y-0.5">
+                    {subItems.map((sub) => {
+                      const subActive = location.pathname + location.search === sub.to ||
+                        (sub.to === to && location.pathname === to && !location.search);
+                      return (
+                        <NavLink
+                          key={sub.to}
+                          to={sub.to}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                            subActive
+                              ? 'text-amber-400 bg-amber-500/5'
+                              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                          {sub.label}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* User */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400">
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <div className="flex items-center gap-1">
-                <Shield className="w-3 h-3 text-slate-500" />
-                <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-800`}>
+          {!collapsed && (
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                <div className="flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-slate-500" />
+                  <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className={`flex items-center gap-2 w-full ${collapsed ? 'px-3 py-2 justify-center' : 'px-4 py-2'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
+            title={collapsed ? 'Sign Out' : undefined}
           >
-            <LogOut className="w-4 h-4" />
-            Sign Out
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!collapsed && 'Sign Out'}
           </button>
         </div>
       </aside>

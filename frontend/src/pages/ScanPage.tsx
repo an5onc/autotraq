@@ -140,14 +140,14 @@ export function ScanPage() {
 
   return (
     <Layout>
-      <div className="animate-fade-in max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Scan Barcode</h1>
-          <p className="text-sm text-slate-500 mt-1">Scan a part barcode or enter SKU manually</p>
+      <div className="animate-fade-in max-w-3xl mx-auto">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-white">Scan Barcode</h1>
+          <p className="text-sm text-slate-500 mt-2">Scan a part barcode or enter SKU manually</p>
         </div>
 
         {/* Camera Scanner */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <div id="scanner-region" className={scanning ? 'mb-4' : 'hidden'} />
           {!scanning ? (
             <button onClick={startScanner} className="flex items-center gap-2 w-full justify-center px-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg transition-colors cursor-pointer">
@@ -161,7 +161,7 @@ export function ScanPage() {
         </div>
 
         {/* USB Scanner Mode */}
-        <div className={`bg-slate-900 border rounded-xl p-6 mb-6 transition-colors ${usbMode ? 'border-amber-500/50 ring-1 ring-amber-500/20' : 'border-slate-800'}`}>
+        <div className={`bg-slate-900 border rounded-2xl p-8 mb-8 transition-colors ${usbMode ? 'border-amber-500/50 ring-1 ring-amber-500/20' : 'border-slate-800'}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Usb className="w-4 h-4 text-slate-400" />
@@ -192,7 +192,7 @@ export function ScanPage() {
         </div>
 
         {/* Manual Entry */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Manual SKU Lookup</h3>
           <form onSubmit={handleManualLookup} className="flex gap-3">
             <input type="text" className={inputCls} placeholder="e.g. FD-MUS-24-ENBL" value={manualSku} onChange={(e) => setManualSku(e.target.value.toUpperCase())} />

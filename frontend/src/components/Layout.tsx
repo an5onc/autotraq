@@ -109,9 +109,9 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
-      <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}>
+      <aside className={`${collapsed ? 'w-[72px]' : 'w-72'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}>
         {/* Logo */}
-        <div className={`${collapsed ? 'p-3' : 'p-5'} border-b border-slate-800`}>
+        <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-800`}>
           <div className="flex items-center gap-3">
             <div className={`${collapsed ? 'w-10 h-10' : 'w-10 h-10'} bg-amber-500 rounded-lg flex items-center justify-center shrink-0`}>
               <BarChart3 className="w-6 h-6 text-slate-900" />
@@ -144,7 +144,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 ${collapsed ? 'p-2' : 'p-3'} space-y-0.5 overflow-y-auto`}>
+        <nav className={`flex-1 ${collapsed ? 'p-2' : 'px-4 py-5'} space-y-1 overflow-y-auto`}>
           {navItems.map(({ to, icon: Icon, label, subItems }) => {
             const active = isActiveSection(to);
             const expanded = expandedSections.has(to) && !collapsed;
@@ -239,7 +239,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+        <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10">
           {children}
         </div>
       </main>

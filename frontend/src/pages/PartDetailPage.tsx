@@ -242,13 +242,13 @@ export function PartDetailPage() {
     <Layout>
       <div className="animate-fade-in max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate('/parts')} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-white">{part.name}</h1>
+              <h1 className="text-3xl font-bold text-white">{part.name}</h1>
               <span className="inline-flex px-2.5 py-1 mt-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
             </div>
           </div>
@@ -257,7 +257,7 @@ export function PartDetailPage() {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}<button onClick={() => setError('')} className="ml-2 text-red-300 hover:text-red-200">×</button></div>}
 
         {/* Overview Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <EditableField field="name" value={part.name} label="Name" />
@@ -274,7 +274,7 @@ export function PartDetailPage() {
         </div>
 
         {/* Barcode Section */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" /> Barcode
           </h2>
@@ -299,7 +299,7 @@ export function PartDetailPage() {
 
         {/* SKU Decoded */}
         {skuDecoded && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">SKU Decoded</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
@@ -320,7 +320,7 @@ export function PartDetailPage() {
         )}
 
         {/* Fitments */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Car className="w-4 h-4" /> Fitments ({part.fitments?.length || 0})
@@ -374,7 +374,7 @@ export function PartDetailPage() {
         </div>
 
         {/* Interchange Groups */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Link2 className="w-4 h-4" /> Interchange Groups ({part.interchangeMembers?.length || 0})
@@ -424,7 +424,7 @@ export function PartDetailPage() {
 
         {/* Danger Zone */}
         {isManager && (
-          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6 mb-6">
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-8 mb-10">
             <h2 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-2 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" /> Danger Zone
             </h2>

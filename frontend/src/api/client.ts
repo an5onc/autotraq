@@ -132,9 +132,13 @@ class ApiClient {
   }
 
   // Vehicles
-  async getVehicles(search?: string) {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request<{ vehicles: Vehicle[]; pagination: Pagination }>(`/vehicles${params}`);
+  async getVehicles(search?: string, page?: number, limit?: number) {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (page) p.set('page', String(page));
+    if (limit) p.set('limit', String(limit));
+    const qs = p.toString();
+    return this.request<{ vehicles: Vehicle[]; pagination: Pagination }>(`/vehicles${qs ? '?' + qs : ''}`);
   }
 
   async getVehicleMakes(year: number) {

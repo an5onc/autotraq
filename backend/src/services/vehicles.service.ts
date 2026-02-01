@@ -44,33 +44,35 @@ export async function getVehicles(query: VehiclesQuery) {
     // Split search into tokens so "2014 ford" matches year=2014 AND make=Ford
     const tokens = search.trim().split(/\s+/).filter(Boolean);
 
-    if (tokens.length > 1) {
-      // Multi-word: AND each token — each must match at least one field
-      const andConditions = tokens.map(token => {
-        const conditions: Record<string, unknown>[] = [
-          { make: { contains: token } },
-          { model: { contains: token } },
-          { trim: { contains: token } },
-        ];
-        const yearNum = parseInt(token, 10);
-        if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
-          conditions.push({ year: yearNum });
-        }
-        return { OR: conditions };
-      });
-      where.AND = andConditions;
-    } else {
-      // Single word: OR across all fields
-      const searchConditions: Record<string, unknown>[] = [
-        { make: { contains: search } },
-        { model: { contains: search } },
-        { trim: { contains: search } },
+    const buildTokenConditions = (token: string) => {
+      const conditions: Record<string, unknown>[] = [
+        { make: { contains: token } },
+        { model: { contains: token } },
+        { trim: { contains: token } },
       ];
-      const yearNum = parseInt(search, 10);
-      if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
-        searchConditions.push({ year: yearNum });
+
+      // Year matching: support partial years (e.g. "201" matches 2010-2019)
+      if (/^\d+$/.test(token)) {
+        const num = parseInt(token, 10);
+        if (token.length === 4 && num >= 1900 && num <= 2100) {
+          // Exact 4-digit year
+          conditions.push({ year: num });
+        } else if (token.length < 4) {
+          // Partial year: "201" → 2010-2019, "20" → 2000-2099
+          const padded = token.padEnd(4, '0');
+          const low = parseInt(padded, 10);
+          const high = parseInt(token.padEnd(4, '9'), 10);
+          conditions.push({ year: { gte: low, lte: high } });
+        }
       }
-      where.OR = searchConditions;
+
+      return conditions;
+    };
+
+    if (tokens.length > 1) {
+      where.AND = tokens.map(token => ({ OR: buildTokenConditions(token) }));
+    } else {
+      where.OR = buildTokenConditions(tokens[0]);
     }
   }
 

@@ -1,12 +1,11 @@
 import { ReactNode, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine,
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
@@ -85,7 +84,6 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
-    // Auto-expand the active section
     const active = navItems.find(item => location.pathname.startsWith(item.to));
     return new Set(active ? [active.to] : []);
   });
@@ -109,16 +107,18 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
-      <aside className={`${collapsed ? 'w-[72px]' : 'w-72'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}>
+      <aside
+        className={`${collapsed ? 'w-20' : 'w-[280px]'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
+      >
         {/* Logo */}
-        <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-800`}>
+        <div className={`${collapsed ? 'px-4 py-5' : 'px-6 py-6'} border-b border-slate-800`}>
           <div className="flex items-center gap-3">
-            <div className={`${collapsed ? 'w-10 h-10' : 'w-10 h-10'} bg-amber-500 rounded-lg flex items-center justify-center shrink-0`}>
-              <BarChart3 className="w-6 h-6 text-slate-900" />
+            <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
+              <BarChart3 className="w-5 h-5 text-slate-900" />
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-white tracking-wider">AUTOTRAQ</h1>
+                <h1 className="text-base font-bold text-white tracking-wider leading-tight">AUTOTRAQ</h1>
                 <p className="text-[10px] text-slate-500 tracking-widest uppercase">Inventory System</p>
               </div>
             )}
@@ -126,10 +126,10 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Collapse toggle */}
-        <div className={`${collapsed ? 'px-3 py-2' : 'px-4 py-2'} border-b border-slate-800/50`}>
+        <div className={`${collapsed ? 'px-3' : 'px-5'} py-3 border-b border-slate-800/50`}>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors cursor-pointer"
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors cursor-pointer"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? (
@@ -144,65 +144,53 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 ${collapsed ? 'p-2' : 'px-4 py-5'} space-y-1 overflow-y-auto`}>
+        <nav className={`flex-1 ${collapsed ? 'px-3 py-4' : 'px-5 py-5'} space-y-1.5 overflow-y-auto`}>
           {navItems.map(({ to, icon: Icon, label, subItems }) => {
             const active = isActiveSection(to);
             const expanded = expandedSections.has(to) && !collapsed;
 
             return (
               <div key={to}>
-                {/* Main nav item */}
-                <div className="flex items-center">
-                  <NavLink
-                    to={to}
-                    onClick={(e) => {
-                      if (!collapsed && subItems) {
-                        e.preventDefault();
-                        toggleSection(to);
-                      }
-                    }}
-                    className={`flex items-center gap-3 flex-1 ${collapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5'} rounded-lg text-sm font-medium transition-all duration-200 ${
-                      active
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
-                    title={collapsed ? label : undefined}
-                  >
-                    <Icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && (
-                      <>
-                        <span className="flex-1">{label}</span>
-                        {subItems && (
-                          expanded
-                            ? <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                            : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                </div>
+                <NavLink
+                  to={to}
+                  onClick={(e) => {
+                    if (!collapsed && subItems) {
+                      e.preventDefault();
+                      toggleSection(to);
+                    }
+                  }}
+                  className={`flex items-center gap-3 ${collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'} rounded-lg text-sm font-medium transition-all duration-200 ${
+                    active
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={collapsed ? label : undefined}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1">{label}</span>
+                      {subItems && (
+                        expanded
+                          ? <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                      )}
+                    </>
+                  )}
+                </NavLink>
 
-                {/* Sub-items */}
                 {expanded && subItems && (
-                  <div className="ml-4 pl-4 border-l border-slate-800 mt-0.5 mb-1 space-y-0.5">
-                    {subItems.map((sub) => {
-                      const subActive = location.pathname + location.search === sub.to ||
-                        (sub.to === to && location.pathname === to && !location.search);
-                      return (
-                        <NavLink
-                          key={sub.to}
-                          to={sub.to}
-                          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                            subActive
-                              ? 'text-amber-400 bg-amber-500/5'
-                              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-                          }`}
-                        >
-                          <sub.icon className="w-3.5 h-3.5 shrink-0" />
-                          {sub.label}
-                        </NavLink>
-                      );
-                    })}
+                  <div className="ml-5 pl-4 border-l border-slate-800 mt-1 mb-2 space-y-0.5">
+                    {subItems.map((sub) => (
+                      <NavLink
+                        key={sub.to}
+                        to={sub.to}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-slate-500 hover:text-slate-300 hover:bg-slate-800/50`}
+                      >
+                        <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                        {sub.label}
+                      </NavLink>
+                    ))}
                   </div>
                 )}
               </div>
@@ -211,15 +199,15 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* User */}
-        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-800`}>
+        <div className={`${collapsed ? 'px-3 py-4' : 'px-5 py-5'} border-t border-slate-800`}>
           {!collapsed && (
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-slate-500" />
                   <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
                 </div>
@@ -228,7 +216,7 @@ export function Layout({ children }: LayoutProps) {
           )}
           <button
             onClick={handleLogout}
-            className={`flex items-center gap-2 w-full ${collapsed ? 'px-3 py-2 justify-center' : 'px-4 py-2'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
+            className={`flex items-center gap-2 w-full ${collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-2.5'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
             title={collapsed ? 'Sign Out' : undefined}
           >
             <LogOut className="w-4 h-4 shrink-0" />
@@ -239,7 +227,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10">
+        <div className="p-10 lg:p-12">
           {children}
         </div>
       </main>

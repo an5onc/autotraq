@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
-import { Search, Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -206,7 +206,7 @@ export function PartsPage() {
     }
   };
 
-  const inputCls = "w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
+  const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
   const selectCls = inputCls;
   const yearOptions = Array.from({ length: 27 }, (_, i) => 2000 + i).reverse();
 
@@ -221,13 +221,13 @@ export function PartsPage() {
           </div>
           {isManager && (
             <div className="flex gap-2">
-              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-5 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Car className="w-4 h-4" /> Vehicle
               </button>
-              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-5 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Link2 className="w-4 h-4" /> Group
               </button>
-              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm transition-colors cursor-pointer">
+              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm transition-colors cursor-pointer">
                 <Plus className="w-4 h-4" /> New Part
               </button>
             </div>
@@ -244,7 +244,7 @@ export function PartsPage() {
             placeholder="Search by SKU, name, or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors text-sm"
+            className="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all"
           />
           {search && (
             <button
@@ -271,22 +271,22 @@ export function PartsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-800">
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
-                    <th className="px-7 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
-                    {isManager && <th className="px-7 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
+                    <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
+                    {isManager && <th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {parts.map((part) => (
                     <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
-                      <td className="px-7 py-4">
-                        <span className="inline-flex px-3.5 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
+                      <td className="px-8 py-5">
+                        <span className="inline-flex px-4 py-2 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
                       </td>
-                      <td className="px-7 py-4">
+                      <td className="px-8 py-5">
                         {part.barcodeData ? (
                           <img
                             src={`data:image/png;base64,${part.barcodeData}`}
@@ -298,9 +298,9 @@ export function PartsPage() {
                           <span className="text-xs text-slate-600">—</span>
                         )}
                       </td>
-                      <td className="px-7 py-4 text-sm text-white font-medium">{part.name}</td>
-                      <td className="px-7 py-4 text-sm text-slate-400">{part.description || '—'}</td>
-                      <td className="px-7 py-4">
+                      <td className="px-8 py-5 text-sm text-white font-medium">{part.name}</td>
+                      <td className="px-8 py-5 text-sm text-slate-400">{part.description || '—'}</td>
+                      <td className="px-8 py-5">
                         {part.fitments && part.fitments.length > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
                             <Car className="w-3 h-3" /> {part.fitments.length}
@@ -309,16 +309,16 @@ export function PartsPage() {
                           <span className="text-xs text-slate-600">None</span>
                         )}
                       </td>
-                      <td className="px-7 py-4 text-sm text-slate-400">
+                      <td className="px-8 py-5 text-sm text-slate-400">
                         {part.interchangeMembers && part.interchangeMembers.length > 0
                           ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
                           : <span className="text-xs text-slate-600">None</span>}
                       </td>
                       {isManager && (
-                        <td className="px-7 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
                           </div>
                         </td>
                       )}
@@ -479,7 +479,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-7 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
         </div>

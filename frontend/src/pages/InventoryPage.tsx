@@ -89,18 +89,18 @@ export function InventoryPage() {
       <div className="animate-fade-in">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Inventory</h1>
+            <h1 className="text-3xl font-bold text-white">Inventory</h1>
             <p className="text-sm text-slate-500 mt-1">Track stock levels and movements</p>
           </div>
           <div className="flex gap-2">
             {isManager && (
               <>
-                <button onClick={() => setShowLocationModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><MapPin className="w-4 h-4" /> Location</button>
-                <button onClick={() => setShowCorrectModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><PenLine className="w-4 h-4" /> Correction</button>
+                <button onClick={() => setShowLocationModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><MapPin className="w-4 h-4" /> Location</button>
+                <button onClick={() => setShowCorrectModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><PenLine className="w-4 h-4" /> Correction</button>
               </>
             )}
             {canFulfill && (
-              <button onClick={() => setShowReceiveModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer"><ArrowDownToLine className="w-4 h-4" /> Receive Stock</button>
+              <button onClick={() => setShowReceiveModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer"><ArrowDownToLine className="w-4 h-4" /> Receive Stock</button>
             )}
           </div>
         </div>

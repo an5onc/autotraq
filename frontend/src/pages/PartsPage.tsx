@@ -221,13 +221,13 @@ export function PartsPage() {
           </div>
           {isManager && (
             <div className="flex gap-2">
-              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowVehicleModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Car className="w-4 h-4" /> Vehicle
               </button>
-              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowGroupModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Link2 className="w-4 h-4" /> Group
               </button>
-              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm transition-colors cursor-pointer">
+              <button onClick={() => setShowPartModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">
                 <Plus className="w-4 h-4" /> New Part
               </button>
             </div>
@@ -317,8 +317,8 @@ export function PartsPage() {
                       {isManager && (
                         <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
                           </div>
                         </td>
                       )}

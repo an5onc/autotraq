@@ -192,7 +192,7 @@ export function ScanPage() {
               <Usb className="w-4 h-4 text-slate-400" />
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">USB Barcode Scanner</h3>
             </div>
-            <button onClick={toggleUsbMode} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer ${usbMode ? 'bg-amber-500 text-slate-900 hover:bg-amber-400' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600'}`}>
+            <button onClick={toggleUsbMode} className={`inline-flex items-center gap-3 px-6 py-3 rounded-xl whitespace-nowrap font-semibold text-sm transition-colors cursor-pointer ${usbMode ? 'bg-amber-500 text-slate-900 hover:bg-amber-400' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600'}`}>
               <Zap className="w-4 h-4" />
               {usbMode ? 'Scanner Active' : 'Enable Scanner Mode'}
             </button>

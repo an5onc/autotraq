@@ -281,7 +281,7 @@ export function PartDetailPage() {
           {part.barcodeData ? (
             <div className="flex items-center gap-6">
               <img src={`data:image/png;base64,${part.barcodeData}`} alt="Barcode" className="h-16" />
-              <button onClick={printBarcode} className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={printBarcode} className="inline-flex items-center gap-3 px-5 py-2.5 bg-slate-800 whitespace-nowrap border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Printer className="w-4 h-4" /> Print
               </button>
             </div>
@@ -289,7 +289,7 @@ export function PartDetailPage() {
             <div className="flex items-center gap-4">
               <p className="text-sm text-slate-500">No barcode generated for this part.</p>
               {isManager && (
-                <button onClick={handleGenerateBarcode} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50">
+                <button onClick={handleGenerateBarcode} disabled={saving} className="inline-flex items-center gap-3 px-6 py-3 bg-amber-500 whitespace-nowrap hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50">
                   <BarChart3 className="w-4 h-4" /> Generate Barcode
                 </button>
               )}
@@ -429,7 +429,7 @@ export function PartDetailPage() {
               <AlertTriangle className="w-4 h-4" /> Danger Zone
             </h2>
             <p className="text-sm text-slate-400 mb-4">Permanently delete this part and all its fitments and group memberships.</p>
-            <button onClick={() => setShowDeleteModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg text-sm transition-colors cursor-pointer">
+            <button onClick={() => setShowDeleteModal(true)} className="inline-flex items-center gap-3 px-5 py-2.5 bg-red-500 whitespace-nowrap/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg text-sm transition-colors cursor-pointer">
               <Trash2 className="w-4 h-4" /> Delete Part
             </button>
           </div>

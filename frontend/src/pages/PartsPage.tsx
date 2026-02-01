@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { Search, Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
 
 export function PartsPage() {
+  const [searchParams] = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { isManager } = useAuth();
   const [parts, setParts] = useState<Part[]>([]);
@@ -115,6 +117,14 @@ export function PartsPage() {
     }
   }, [skuMake, skuModel, skuYear, skuSystem, skuComponent, skuPosition]);
 
+  // Handle sidebar sub-nav query params
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const focus = searchParams.get('focus');
+    if (action === 'new') setShowPartModal(true);
+    if (focus === 'search') searchInputRef.current?.focus();
+  }, [searchParams]);
+
   useEffect(() => { loadData(); }, [search]);
 
   const loadData = async () => {
@@ -211,13 +221,13 @@ export function PartsPage() {
           </div>
           {isManager && (
             <div className="flex gap-2">
-              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-5 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Car className="w-4 h-4" /> Vehicle
               </button>
-              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-5 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                 <Link2 className="w-4 h-4" /> Group
               </button>
-              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer">
+              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm transition-colors cursor-pointer">
                 <Plus className="w-4 h-4" /> New Part
               </button>
             </div>
@@ -228,14 +238,23 @@ export function PartsPage() {
 
         {/* Search */}
         <div className="relative mb-8">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Search parts by SKU, name, or description..."
+            placeholder="Search by SKU, name, or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-14 pr-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors text-sm"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Table */}
@@ -266,7 +285,7 @@ export function PartsPage() {
                   {parts.map((part) => (
                     <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
                       <td className="px-7 py-4">
-                        <span className="inline-flex px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
+                        <span className="inline-flex px-3.5 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
                       </td>
                       <td className="px-7 py-4">
                         {part.barcodeData ? (
@@ -299,8 +318,8 @@ export function PartsPage() {
                       {isManager && (
                         <td className="px-7 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
                           </div>
                         </td>
                       )}

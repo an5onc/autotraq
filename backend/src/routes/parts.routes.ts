@@ -4,6 +4,7 @@ import { validateBody, validateQuery, validateParams } from '../middleware/valid
 import { authenticate, requireManager } from '../middleware/auth.middleware.js';
 import {
   createPartSchema,
+  updatePartSchema,
   addFitmentSchema,
   partsQuerySchema,
   idParamSchema,
@@ -23,6 +24,15 @@ router.get('/', validateQuery(partsQuerySchema), partsController.getParts);
 
 // GET /api/parts/:id - Get part by ID (all authenticated users)
 router.get('/:id', validateParams(idParamSchema), partsController.getPartById);
+
+// PUT /api/parts/:id - Update part (manager+)
+router.put('/:id', requireManager, validateParams(idParamSchema), validateBody(updatePartSchema), partsController.updatePart);
+
+// DELETE /api/parts/:id - Delete part (manager+)
+router.delete('/:id', requireManager, validateParams(idParamSchema), partsController.deletePart);
+
+// POST /api/parts/:id/generate-barcode - Generate barcode (manager+)
+router.post('/:id/generate-barcode', requireManager, validateParams(idParamSchema), partsController.generatePartBarcode);
 
 // POST /api/parts/:id/fitments - Add fitment to part (manager+)
 router.post(

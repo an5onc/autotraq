@@ -1,5 +1,5 @@
 import prisma from '../repositories/prisma.js';
-import { CreatePartInput, PartsQuery } from '../schemas/parts.schema.js';
+import { CreatePartInput, UpdatePartInput, PartsQuery } from '../schemas/parts.schema.js';
 import { generateBarcode } from './barcode.service.js';
 import { lookupSku } from './sku.service.js';
 
@@ -112,6 +112,61 @@ export async function getPartById(id: number) {
   }
 
   return part;
+}
+
+export async function updatePart(id: number, data: UpdatePartInput) {
+  const part = await prisma.part.findUnique({ where: { id } });
+  if (!part) throw new Error('Part not found');
+
+  if (data.sku && data.sku !== part.sku) {
+    const existing = await prisma.part.findUnique({ where: { sku: data.sku } });
+    if (existing) throw new Error('SKU already exists');
+  }
+
+  return prisma.part.update({
+    where: { id },
+    data,
+    include: {
+      fitments: { include: { vehicle: true } },
+      interchangeMembers: { include: { group: { include: { members: { include: { part: true } } } } } },
+    },
+  });
+}
+
+export async function deletePart(id: number) {
+  const part = await prisma.part.findUnique({ where: { id } });
+  if (!part) throw new Error('Part not found');
+
+  await prisma.$transaction([
+    prisma.partFitment.deleteMany({ where: { partId: id } }),
+    prisma.interchangeGroupMember.deleteMany({ where: { partId: id } }),
+    prisma.requestItem.deleteMany({ where: { partId: id } }),
+    prisma.inventoryEvent.deleteMany({ where: { partId: id } }),
+    prisma.part.delete({ where: { id } }),
+  ]);
+}
+
+export async function generatePartBarcode(id: number) {
+  const part = await prisma.part.findUnique({ where: { id } });
+  if (!part) throw new Error('Part not found');
+
+  const barcodeData = await generateBarcode(part.sku);
+  let skuDecoded: string | undefined;
+  try {
+    const decoded = await lookupSku(part.sku);
+    if (decoded) skuDecoded = JSON.stringify(decoded);
+  } catch {
+    // Non-standard SKU
+  }
+
+  return prisma.part.update({
+    where: { id },
+    data: { barcodeData, skuDecoded },
+    include: {
+      fitments: { include: { vehicle: true } },
+      interchangeMembers: { include: { group: { include: { members: { include: { part: true } } } } } },
+    },
+  });
 }
 
 export async function addFitment(partId: number, vehicleId: number) {

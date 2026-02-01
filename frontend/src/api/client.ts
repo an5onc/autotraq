@@ -93,6 +93,37 @@ class ApiClient {
     return this.request<Part>(`/parts/${id}`);
   }
 
+  async updatePart(id: number, data: { sku?: string; name?: string; description?: string }) {
+    return this.request<Part>(`/parts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePart(id: number) {
+    return this.request<{ message: string }>(`/parts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async generatePartBarcode(id: number) {
+    return this.request<Part>(`/parts/${id}/generate-barcode`, {
+      method: 'POST',
+    });
+  }
+
+  async removeGroupMember(groupId: number, partId: number) {
+    return this.request<{ message: string }>(`/interchange-groups/${groupId}/members/${partId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async removeFitment(partId: number, vehicleId: number) {
+    return this.request<{ message: string }>(`/parts/${partId}/fitments/${vehicleId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async addFitment(partId: number, vehicleId: number) {
     return this.request<PartFitment>(`/parts/${partId}/fitments`, {
       method: 'POST',

@@ -25,6 +25,13 @@ export const fitmentParamSchema = z.object({
   vehicleId: z.coerce.number().int().positive('Vehicle ID must be a positive integer'),
 });
 
+export const updatePartSchema = z.object({
+  sku: z.string().min(1).max(50).optional(),
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().optional(),
+});
+
 export type CreatePartInput = z.infer<typeof createPartSchema>;
+export type UpdatePartInput = z.infer<typeof updatePartSchema>;
 export type AddFitmentInput = z.infer<typeof addFitmentSchema>;
 export type PartsQuery = z.infer<typeof partsQuerySchema>;

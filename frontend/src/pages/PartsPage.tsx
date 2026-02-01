@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { Search, Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
 
 export function PartsPage() {
+  const navigate = useNavigate();
   const { isManager } = useAuth();
   const [parts, setParts] = useState<Part[]>([]);
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
@@ -262,7 +264,7 @@ export function PartsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {parts.map((part) => (
-                    <tr key={part.id} className="hover:bg-slate-800/50 transition-colors">
+                    <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
                       <td className="px-6 py-4">
                         <span className="inline-flex px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
                       </td>
@@ -272,7 +274,7 @@ export function PartsPage() {
                             src={`data:image/png;base64,${part.barcodeData}`}
                             alt="Barcode"
                             className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! })}
+                            onClick={(e) => { e.stopPropagation(); setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! }); }}
                           />
                         ) : (
                           <span className="text-xs text-slate-600">—</span>
@@ -295,7 +297,7 @@ export function PartsPage() {
                           : <span className="text-xs text-slate-600">None</span>}
                       </td>
                       {isManager && (
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
                             <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>

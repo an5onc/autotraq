@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api, SkuLookupResult } from '../api/client';
 import { Layout } from '../components/Layout';
-import { Camera, Search, X, Printer } from 'lucide-react';
+import { Camera, Search, X, Printer, Usb, Zap } from 'lucide-react';
 
 export function ScanPage() {
   const [scanning, setScanning] = useState(false);
@@ -10,7 +10,11 @@ export function ScanPage() {
   const [result, setResult] = useState<SkuLookupResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usbMode, setUsbMode] = useState(false);
+  const [usbBuffer, setUsbBuffer] = useState('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const usbBufferRef = useRef('');
+  const usbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startScanner = async () => {
     setError('');
@@ -79,6 +83,55 @@ export function ScanPage() {
     win.print();
   };
 
+  // USB Barcode Scanner Mode — listens for rapid keystrokes globally
+  const handleUsbKeydown = useCallback((e: KeyboardEvent) => {
+    // Ignore if user is typing in an input field (manual lookup)
+    if (!usbMode) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = usbBufferRef.current.trim();
+      if (code.length >= 3) {
+        lookupSku(code);
+        setUsbBuffer('');
+        usbBufferRef.current = '';
+      }
+      return;
+    }
+
+    // Only accept printable characters
+    if (e.key.length === 1) {
+      e.preventDefault();
+      usbBufferRef.current += e.key;
+      setUsbBuffer(usbBufferRef.current);
+
+      // Auto-clear buffer after 500ms of no input (scanner sends chars rapidly)
+      if (usbTimerRef.current) clearTimeout(usbTimerRef.current);
+      usbTimerRef.current = setTimeout(() => {
+        // If buffer sat for 500ms without Enter, it's probably not a scanner
+        // Keep it visible but don't auto-submit
+      }, 2000);
+    }
+  }, [usbMode]);
+
+  useEffect(() => {
+    if (usbMode) {
+      window.addEventListener('keydown', handleUsbKeydown);
+      return () => window.removeEventListener('keydown', handleUsbKeydown);
+    }
+  }, [usbMode, handleUsbKeydown]);
+
+  const toggleUsbMode = () => {
+    setUsbMode(prev => {
+      if (!prev) {
+        setUsbBuffer('');
+        usbBufferRef.current = '';
+      }
+      return !prev;
+    });
+  };
+
   useEffect(() => {
     return () => { stopScanner(); };
   }, []);
@@ -104,6 +157,37 @@ export function ScanPage() {
             <button onClick={stopScanner} className="flex items-center gap-2 w-full justify-center px-4 py-3 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer">
               <X className="w-5 h-5" /> Stop Scanner
             </button>
+          )}
+        </div>
+
+        {/* USB Scanner Mode */}
+        <div className={`bg-slate-900 border rounded-xl p-6 mb-6 transition-colors ${usbMode ? 'border-amber-500/50 ring-1 ring-amber-500/20' : 'border-slate-800'}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Usb className="w-4 h-4 text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">USB Barcode Scanner</h3>
+            </div>
+            <button onClick={toggleUsbMode} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors cursor-pointer ${usbMode ? 'bg-amber-500 text-slate-900 hover:bg-amber-400' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600'}`}>
+              <Zap className="w-4 h-4" />
+              {usbMode ? 'Scanner Active' : 'Enable Scanner Mode'}
+            </button>
+          </div>
+          {usbMode ? (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-3">
+                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                <span className="text-amber-400 text-sm font-medium">Listening for scanner input...</span>
+              </div>
+              {usbBuffer && (
+                <div className="mt-3">
+                  <p className="text-xs text-slate-500 mb-1">Buffer:</p>
+                  <p className="text-lg font-mono font-bold text-white">{usbBuffer}</p>
+                </div>
+              )}
+              <p className="text-xs text-slate-600 mt-3">Point your USB scanner at a barcode. It will auto-submit on scan.</p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Plug in your USB barcode scanner and enable scanner mode. Scans auto-lookup — no clicking required.</p>
           )}
         </div>
 

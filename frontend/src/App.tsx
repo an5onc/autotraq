@@ -6,6 +6,7 @@ import { PartsPage } from './pages/PartsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { RequestsPage } from './pages/RequestsPage';
 import { VehiclesPage } from './pages/VehiclesPage';
+import { ScanPage } from './pages/ScanPage';
 
 function App() {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ function App() {
       <Route path="/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
       <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
+      <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/parts" replace />} />
       <Route path="*" element={<Navigate to="/parts" replace />} />
     </Routes>

@@ -1,5 +1,7 @@
 import prisma from '../repositories/prisma.js';
 import { CreatePartInput, PartsQuery } from '../schemas/parts.schema.js';
+import { generateBarcode } from './barcode.service.js';
+import { lookupSku } from './sku.service.js';
 
 export async function createPart(input: CreatePartInput) {
   // Check if SKU already exists
@@ -11,8 +13,25 @@ export async function createPart(input: CreatePartInput) {
     throw new Error('SKU already exists');
   }
 
+  // Auto-generate barcode for any SKU
+  let barcodeData: string | undefined;
+  let skuDecoded: string | undefined;
+  try {
+    barcodeData = await generateBarcode(input.sku);
+    const decoded = await lookupSku(input.sku);
+    if (decoded) skuDecoded = JSON.stringify(decoded);
+  } catch {
+    // Non-standard SKU format, no barcode
+  }
+
   return prisma.part.create({
-    data: input,
+    data: {
+      sku: input.sku,
+      name: input.name,
+      description: input.description,
+      barcodeData,
+      skuDecoded,
+    },
   });
 }
 

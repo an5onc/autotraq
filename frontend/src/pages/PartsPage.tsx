@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { api, Part, InterchangeGroup } from '../api/client';
+import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
-import { Search, Plus, Wrench, Link2, Car, X } from 'lucide-react';
+import { Search, Plus, Wrench, Link2, Car, X, Printer } from 'lucide-react';
 
 export function PartsPage() {
   const { isManager } = useAuth();
@@ -23,6 +23,21 @@ export function PartsPage() {
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
+
+  // SKU generation state
+  const [useSkuGen, setUseSkuGen] = useState(false);
+  const [makeCodes, setMakeCodes] = useState<MakeCode[]>([]);
+  const [systemCodes, setSystemCodes] = useState<SystemCode[]>([]);
+  const [componentCodes, setComponentCodes] = useState<ComponentCode[]>([]);
+  const [skuMake, setSkuMake] = useState('');
+  const [skuModel, setSkuModel] = useState('');
+  const [skuYear, setSkuYear] = useState<number | ''>(2024);
+  const [skuSystem, setSkuSystem] = useState('');
+  const [skuComponent, setSkuComponent] = useState('');
+  const [skuPosition, setSkuPosition] = useState('');
+  const [skuPreview, setSkuPreview] = useState('');
+  const [skuBarcode, setSkuBarcode] = useState('');
+  const [barcodeModal, setBarcodeModal] = useState<{ sku: string; barcode: string } | null>(null);
 
   const [partVehicleYear, setPartVehicleYear] = useState<number | ''>('');
   const [partVehicleMake, setPartVehicleMake] = useState('');
@@ -59,6 +74,44 @@ export function PartsPage() {
     api.getVehicleModels(fitYear, fitMake).then(setFitModels).catch(() => setFitModels([]));
     setFitVehicleId('');
   }, [fitMake]);
+
+  // Load SKU code tables when modal opens
+  useEffect(() => {
+    if (useSkuGen && makeCodes.length === 0) {
+      api.getMakeCodes().then(setMakeCodes).catch(() => {});
+      api.getSystemCodes().then(setSystemCodes).catch(() => {});
+    }
+  }, [useSkuGen]);
+
+  // Load components when system changes
+  useEffect(() => {
+    if (skuSystem) {
+      api.getComponentCodes(skuSystem).then(setComponentCodes).catch(() => setComponentCodes([]));
+      setSkuComponent('');
+    }
+  }, [skuSystem]);
+
+  // Generate SKU preview
+  useEffect(() => {
+    if (skuMake && skuModel && skuYear && skuSystem && skuComponent) {
+      const timer = setTimeout(async () => {
+        try {
+          const result = await api.generateSku({
+            make: skuMake, model: skuModel, year: skuYear as number,
+            systemCode: skuSystem, componentCode: skuComponent,
+            position: skuPosition || undefined,
+          });
+          setSkuPreview(result.sku);
+          setSkuBarcode(result.barcode_png_base64);
+          setPartForm(f => ({ ...f, sku: result.sku, name: f.name || `${result.decoded.component} - ${result.decoded.make} ${result.decoded.model} ${result.decoded.year}` }));
+        } catch { setSkuPreview(''); setSkuBarcode(''); }
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setSkuPreview('');
+      setSkuBarcode('');
+    }
+  }, [skuMake, skuModel, skuYear, skuSystem, skuComponent, skuPosition]);
 
   useEffect(() => { loadData(); }, [search]);
 
@@ -199,6 +252,7 @@ export function PartsPage() {
                 <thead>
                   <tr className="border-b border-slate-800">
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
@@ -211,6 +265,18 @@ export function PartsPage() {
                     <tr key={part.id} className="hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">
                         <span className="inline-flex px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {part.barcodeData ? (
+                          <img
+                            src={`data:image/png;base64,${part.barcodeData}`}
+                            alt="Barcode"
+                            className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! })}
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-600">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-white font-medium">{part.name}</td>
                       <td className="px-6 py-4 text-sm text-slate-400">{part.description || '—'}</td>
@@ -246,9 +312,68 @@ export function PartsPage() {
       </div>
 
       {/* Modals */}
-      {showPartModal && <Modal title="Create New Part" onClose={() => setShowPartModal(false)}>
+      {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(false); }}>
         <form onSubmit={handleCreatePart} className="space-y-4">
-          <Field label="SKU"><input type="text" className={inputCls} value={partForm.sku} onChange={(e) => setPartForm({ ...partForm, sku: e.target.value })} required placeholder="BRK-001" /></Field>
+          {/* SKU Generation Toggle */}
+          <div className="flex items-center gap-3 mb-2">
+            <button type="button" onClick={() => setUseSkuGen(!useSkuGen)} className={`px-3 py-1.5 text-xs rounded-md border transition-colors cursor-pointer ${useSkuGen ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+              {useSkuGen ? '✓ Auto-Generate SKU' : 'Auto-Generate SKU'}
+            </button>
+          </div>
+
+          {useSkuGen ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Make">
+                  <select className={selectCls} value={skuMake} onChange={(e) => setSkuMake(e.target.value)} required>
+                    <option value="">Select...</option>
+                    {makeCodes.map(mc => <option key={mc.code} value={mc.make}>{mc.make}</option>)}
+                  </select>
+                </Field>
+                <Field label="Model">
+                  <input type="text" className={inputCls} value={skuModel} onChange={(e) => setSkuModel(e.target.value)} required placeholder="Mustang" />
+                </Field>
+                <Field label="Year">
+                  <input type="number" className={inputCls} value={skuYear} onChange={(e) => setSkuYear(e.target.value ? parseInt(e.target.value) : '')} required min={1950} max={2099} />
+                </Field>
+                <Field label="System">
+                  <select className={selectCls} value={skuSystem} onChange={(e) => setSkuSystem(e.target.value)} required>
+                    <option value="">Select...</option>
+                    {systemCodes.map(sc => <option key={sc.code} value={sc.code}>{sc.name}</option>)}
+                  </select>
+                </Field>
+                <Field label="Component">
+                  <select className={selectCls} value={skuComponent} onChange={(e) => setSkuComponent(e.target.value)} required>
+                    <option value="">Select...</option>
+                    {componentCodes.map(cc => <option key={cc.code} value={cc.code}>{cc.name}</option>)}
+                  </select>
+                </Field>
+                <Field label="Position (opt.)">
+                  <select className={selectCls} value={skuPosition} onChange={(e) => setSkuPosition(e.target.value)}>
+                    <option value="">None</option>
+                    <option value="LF">Left Front</option>
+                    <option value="RF">Right Front</option>
+                    <option value="LR">Left Rear</option>
+                    <option value="RR">Right Rear</option>
+                    <option value="L">Left</option>
+                    <option value="R">Right</option>
+                    <option value="F">Front</option>
+                    <option value="RE">Rear</option>
+                  </select>
+                </Field>
+              </div>
+              {skuPreview && (
+                <div className="bg-slate-800 rounded-lg p-4 text-center">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Generated SKU</p>
+                  <p className="text-lg font-mono font-bold text-amber-400">{skuPreview}</p>
+                  {skuBarcode && <img src={`data:image/png;base64,${skuBarcode}`} alt="Barcode preview" className="mt-3 mx-auto max-w-full" />}
+                </div>
+              )}
+            </>
+          ) : (
+            <Field label="SKU"><input type="text" className={inputCls} value={partForm.sku} onChange={(e) => setPartForm({ ...partForm, sku: e.target.value })} required placeholder="BRK-001" /></Field>
+          )}
+
           <Field label="Name"><input type="text" className={inputCls} value={partForm.name} onChange={(e) => setPartForm({ ...partForm, name: e.target.value })} required placeholder="Brake Pad Set" /></Field>
           <Field label="Description (optional)"><input type="text" className={inputCls} value={partForm.description} onChange={(e) => setPartForm({ ...partForm, description: e.target.value })} placeholder="Front brake pads for sedans" /></Field>
           <div className="border-t border-slate-800 pt-4">
@@ -303,6 +428,25 @@ export function PartsPage() {
           </Field>
           <ModalFooter onCancel={() => setShowAddToGroupModal(false)} label="Add to Group" />
         </form>
+      </Modal>}
+      {/* Barcode Enlarge Modal */}
+      {barcodeModal && <Modal title={`Barcode: ${barcodeModal.sku}`} onClose={() => setBarcodeModal(null)}>
+        <div className="flex flex-col items-center">
+          <img src={`data:image/png;base64,${barcodeModal.barcode}`} alt="Barcode" className="max-w-full" />
+          <p className="mt-3 text-lg font-mono font-bold text-amber-400">{barcodeModal.sku}</p>
+          <button
+            onClick={() => {
+              const win = window.open('', '_blank');
+              if (!win) return;
+              win.document.write(`<html><head><title>${barcodeModal.sku}</title><style>body{font-family:monospace;text-align:center;padding:40px}img{max-width:100%}h2{margin:20px 0}</style></head><body><img src="data:image/png;base64,${barcodeModal.barcode}" /><h2>${barcodeModal.sku}</h2></body></html>`);
+              win.document.close();
+              win.print();
+            }}
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            <Printer className="w-4 h-4" /> Print Barcode
+          </button>
+        </div>
       </Modal>}
     </Layout>
   );

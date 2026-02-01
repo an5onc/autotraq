@@ -206,6 +206,36 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // SKU / Barcode
+  async getMakeCodes() {
+    return this.request<MakeCode[]>('/sku/make-codes');
+  }
+
+  async getModelCodes(make?: string) {
+    const params = make ? `?make=${encodeURIComponent(make)}` : '';
+    return this.request<ModelCode[]>(`/sku/model-codes${params}`);
+  }
+
+  async getSystemCodes() {
+    return this.request<SystemCode[]>('/sku/system-codes');
+  }
+
+  async getComponentCodes(systemCode?: string) {
+    const params = systemCode ? `?system=${encodeURIComponent(systemCode)}` : '';
+    return this.request<ComponentCode[]>(`/sku/component-codes${params}`);
+  }
+
+  async generateSku(input: { make: string; model: string; year: number; systemCode: string; componentCode: string; position?: string }) {
+    return this.request<SkuGenerateResult>('/sku/generate', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async lookupSku(sku: string) {
+    return this.request<SkuLookupResult>(`/sku/lookup/${encodeURIComponent(sku)}`);
+  }
 }
 
 // Types
@@ -221,6 +251,8 @@ export interface Part {
   sku: string;
   name: string;
   description?: string;
+  barcodeData?: string;
+  skuDecoded?: string;
   fitments?: PartFitment[];
   interchangeMembers?: InterchangeGroupMember[];
 }
@@ -301,6 +333,59 @@ export interface RequestItem {
   locationId?: number;
   part?: Part;
   location?: Location;
+}
+
+export interface MakeCode {
+  id: number;
+  make: string;
+  code: string;
+}
+
+export interface ModelCode {
+  id: number;
+  make: string;
+  model: string;
+  code: string;
+}
+
+export interface SystemCode {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+}
+
+export interface ComponentCode {
+  id: number;
+  systemCode: string;
+  name: string;
+  code: string;
+}
+
+export interface SkuGenerateResult {
+  sku: string;
+  decoded: {
+    make: string;
+    model: string;
+    year: number;
+    system: string;
+    component: string;
+    position: string | null;
+  };
+  barcode_png_base64: string;
+}
+
+export interface SkuLookupResult {
+  sku: string;
+  decoded: {
+    make: string;
+    model: string;
+    year: number;
+    system: string;
+    component: string;
+    position: string | null;
+  };
+  barcode_png_base64: string;
 }
 
 export interface Pagination {

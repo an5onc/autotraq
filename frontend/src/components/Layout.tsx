@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield } from 'lucide-react';
+import { Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/vehicles', icon: Car, label: 'Vehicles' },
   { to: '/inventory', icon: Package, label: 'Inventory' },
   { to: '/requests', icon: ClipboardList, label: 'Requests' },
+  { to: '/scan', icon: ScanLine, label: 'Scan' },
 ];
 
 export function Layout({ children }: LayoutProps) {

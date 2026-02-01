@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api, Part, InterchangeGroup } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { Search, Plus, Wrench, Link2, Car, X } from 'lucide-react';
 
 export function PartsPage() {
   const { isManager } = useAuth();
@@ -11,7 +12,6 @@ export function PartsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Modals
   const [showPartModal, setShowPartModal] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [showFitmentModal, setShowFitmentModal] = useState(false);
@@ -19,13 +19,11 @@ export function PartsPage() {
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
 
-  // Forms
   const [partForm, setPartForm] = useState({ sku: '', name: '', description: '' });
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
 
-  // Cascading vehicle selectors (shared between create-part and fitment modals)
   const [partVehicleYear, setPartVehicleYear] = useState<number | ''>('');
   const [partVehicleMake, setPartVehicleMake] = useState('');
   const [partVehicleId, setPartVehicleId] = useState<number | ''>('');
@@ -38,45 +36,36 @@ export function PartsPage() {
   const [fitMakes, setFitMakes] = useState<string[]>([]);
   const [fitModels, setFitModels] = useState<{ id: number; model: string; trim: string | null }[]>([]);
 
-  // Load makes when year changes (part modal)
   useEffect(() => {
     if (partVehicleYear === '') { setPartMakes([]); setPartVehicleMake(''); setPartModels([]); setPartVehicleId(''); return; }
     api.getVehicleMakes(partVehicleYear).then(setPartMakes).catch(() => setPartMakes([]));
     setPartVehicleMake(''); setPartModels([]); setPartVehicleId('');
   }, [partVehicleYear]);
 
-  // Load models when make changes (part modal)
   useEffect(() => {
     if (partVehicleYear === '' || !partVehicleMake) { setPartModels([]); setPartVehicleId(''); return; }
     api.getVehicleModels(partVehicleYear, partVehicleMake).then(setPartModels).catch(() => setPartModels([]));
     setPartVehicleId('');
   }, [partVehicleMake]);
 
-  // Load makes when year changes (fitment modal)
   useEffect(() => {
     if (fitYear === '') { setFitMakes([]); setFitMake(''); setFitModels([]); setFitVehicleId(''); return; }
     api.getVehicleMakes(fitYear).then(setFitMakes).catch(() => setFitMakes([]));
     setFitMake(''); setFitModels([]); setFitVehicleId('');
   }, [fitYear]);
 
-  // Load models when make changes (fitment modal)
   useEffect(() => {
     if (fitYear === '' || !fitMake) { setFitModels([]); setFitVehicleId(''); return; }
     api.getVehicleModels(fitYear, fitMake).then(setFitModels).catch(() => setFitModels([]));
     setFitVehicleId('');
   }, [fitMake]);
 
-  useEffect(() => {
-    loadData();
-  }, [search]);
+  useEffect(() => { loadData(); }, [search]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [partsData, groupsData] = await Promise.all([
-        api.getParts(search),
-        api.getInterchangeGroups(),
-      ]);
+      const [partsData, groupsData] = await Promise.all([api.getParts(search), api.getInterchangeGroups()]);
       setParts(partsData.parts);
       setGroups(groupsData);
     } catch (err) {
@@ -90,13 +79,8 @@ export function PartsPage() {
     e.preventDefault();
     try {
       const part = await api.createPart(partForm.sku, partForm.name, partForm.description || undefined);
-      // If a vehicle was selected, auto-create fitment
       if (partVehicleId !== '') {
-        try {
-          await api.addFitment(part.id, partVehicleId);
-        } catch (fitErr) {
-          console.warn('Part created but fitment failed:', fitErr);
-        }
+        try { await api.addFitment(part.id, partVehicleId); } catch {}
       }
       setShowPartModal(false);
       setPartForm({ sku: '', name: '', description: '' });
@@ -157,420 +141,201 @@ export function PartsPage() {
     }
   };
 
+  const inputCls = "w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
+  const selectCls = inputCls;
+  const yearOptions = Array.from({ length: 27 }, (_, i) => 2000 + i).reverse();
+
   return (
     <Layout>
-      <div className="flex-between mb-6">
-        <h1>Parts Catalog</h1>
-        {isManager && (
-          <div className="flex gap-2">
-            <button className="btn btn-secondary" onClick={() => setShowVehicleModal(true)}>
-              + Vehicle
-            </button>
-            <button className="btn btn-secondary" onClick={() => setShowGroupModal(true)}>
-              + Interchange Group
-            </button>
-            <button className="btn btn-primary" onClick={() => setShowPartModal(true)}>
-              + New Part
-            </button>
+      <div className="animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Parts Catalog</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage parts, fitments, and interchange groups</p>
           </div>
-        )}
-      </div>
+          {isManager && (
+            <div className="flex gap-2">
+              <button onClick={() => setShowVehicleModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+                <Car className="w-4 h-4" /> Vehicle
+              </button>
+              <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+                <Link2 className="w-4 h-4" /> Group
+              </button>
+              <button onClick={() => setShowPartModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer">
+                <Plus className="w-4 h-4" /> New Part
+              </button>
+            </div>
+          )}
+        </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
-      <div className="card mb-4">
-        <div className="card-body">
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
           <input
             type="text"
-            className="form-input"
             placeholder="Search parts by SKU, name, or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors"
           />
         </div>
-      </div>
 
-      <div className="card">
-        <div className="table-container">
+        {/* Table */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           {loading ? (
-            <div className="card-body">Loading...</div>
+            <div className="p-12 text-center text-slate-500">Loading...</div>
           ) : parts.length === 0 ? (
-            <div className="empty-state">
-              <h3>No parts found</h3>
-              <p>Create your first part to get started</p>
+            <div className="p-12 text-center">
+              <Wrench className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-slate-400">No parts found</h3>
+              <p className="text-sm text-slate-600 mt-1">Create your first part to get started</p>
             </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Name</th>
-                  <th>Description</th>
-                  <th>Fitments</th>
-                  <th>Interchange Groups</th>
-                  {isManager && <th>Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {parts.map((part) => (
-                  <tr key={part.id}>
-                    <td><strong>{part.sku}</strong></td>
-                    <td>{part.name}</td>
-                    <td>{part.description || '-'}</td>
-                    <td>
-                      {part.fitments && part.fitments.length > 0 ? (
-                        <span>{part.fitments.length} vehicle(s)</span>
-                      ) : (
-                        <span style={{ color: 'var(--gray-400)' }}>None</span>
-                      )}
-                    </td>
-                    <td>
-                      {part.interchangeMembers && part.interchangeMembers.length > 0 ? (
-                        part.interchangeMembers.map((m) => m.group?.name).join(', ')
-                      ) : (
-                        <span style={{ color: 'var(--gray-400)' }}>None</span>
-                      )}
-                    </td>
-                    {isManager && (
-                      <td>
-                        <div className="flex gap-2">
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => {
-                              setSelectedPart(part);
-                              setShowFitmentModal(true);
-                            }}
-                          >
-                            + Fitment
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => {
-                              setSelectedPart(part);
-                              setShowAddToGroupModal(true);
-                            }}
-                          >
-                            + Group
-                          </button>
-                        </div>
-                      </td>
-                    )}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
+                    {isManager && <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {parts.map((part) => (
+                    <tr key={part.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="inline-flex px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-white font-medium">{part.name}</td>
+                      <td className="px-6 py-4 text-sm text-slate-400">{part.description || '—'}</td>
+                      <td className="px-6 py-4">
+                        {part.fitments && part.fitments.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
+                            <Car className="w-3 h-3" /> {part.fitments.length}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-600">None</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-400">
+                        {part.interchangeMembers && part.interchangeMembers.length > 0
+                          ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
+                          : <span className="text-xs text-slate-600">None</span>}
+                      </td>
+                      {isManager && (
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                            <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-3 py-1.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-md border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Create Part Modal */}
-      {showPartModal && (
-        <div className="modal-backdrop" onClick={() => setShowPartModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New Part</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowPartModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreatePart}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">SKU</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={partForm.sku}
-                    onChange={(e) => setPartForm({ ...partForm, sku: e.target.value })}
-                    required
-                    placeholder="BRK-001"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={partForm.name}
-                    onChange={(e) => setPartForm({ ...partForm, name: e.target.value })}
-                    required
-                    placeholder="Brake Pad Set"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Description (optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={partForm.description}
-                    onChange={(e) => setPartForm({ ...partForm, description: e.target.value })}
-                    placeholder="Front brake pads for sedans"
-                  />
-                </div>
-                <hr style={{ margin: '16px 0', borderColor: 'var(--gray-200)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '12px' }}>
-                  Optionally link a vehicle fitment:
-                </p>
-                <div className="form-group">
-                  <label className="form-label">Year</label>
-                  <select
-                    className="form-select"
-                    value={partVehicleYear}
-                    onChange={(e) => setPartVehicleYear(e.target.value ? parseInt(e.target.value) : '')}
-                  >
-                    <option value="">-- No vehicle --</option>
-                    {Array.from({ length: 27 }, (_, i) => 2000 + i).reverse().map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-                {partVehicleYear !== '' && (
-                  <div className="form-group">
-                    <label className="form-label">Make</label>
-                    <select
-                      className="form-select"
-                      value={partVehicleMake}
-                      onChange={(e) => setPartVehicleMake(e.target.value)}
-                    >
-                      <option value="">Select make...</option>
-                      {partMakes.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {partVehicleMake && (
-                  <div className="form-group">
-                    <label className="form-label">Model</label>
-                    <select
-                      className="form-select"
-                      value={partVehicleId}
-                      onChange={(e) => setPartVehicleId(e.target.value ? parseInt(e.target.value) : '')}
-                    >
-                      <option value="">Select model...</option>
-                      {partModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.model}{m.trim ? ` (${m.trim})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowPartModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Part</button>
-              </div>
-            </form>
+      {/* Modals */}
+      {showPartModal && <Modal title="Create New Part" onClose={() => setShowPartModal(false)}>
+        <form onSubmit={handleCreatePart} className="space-y-4">
+          <Field label="SKU"><input type="text" className={inputCls} value={partForm.sku} onChange={(e) => setPartForm({ ...partForm, sku: e.target.value })} required placeholder="BRK-001" /></Field>
+          <Field label="Name"><input type="text" className={inputCls} value={partForm.name} onChange={(e) => setPartForm({ ...partForm, name: e.target.value })} required placeholder="Brake Pad Set" /></Field>
+          <Field label="Description (optional)"><input type="text" className={inputCls} value={partForm.description} onChange={(e) => setPartForm({ ...partForm, description: e.target.value })} placeholder="Front brake pads for sedans" /></Field>
+          <div className="border-t border-slate-800 pt-4">
+            <p className="text-xs text-slate-500 mb-3">Optionally link a vehicle fitment:</p>
+            <Field label="Year">
+              <select className={selectCls} value={partVehicleYear} onChange={(e) => setPartVehicleYear(e.target.value ? parseInt(e.target.value) : '')}>
+                <option value="">-- No vehicle --</option>
+                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </Field>
+            {partVehicleYear !== '' && <Field label="Make"><select className={selectCls} value={partVehicleMake} onChange={(e) => setPartVehicleMake(e.target.value)}><option value="">Select make...</option>{partMakes.map((m) => <option key={m} value={m}>{m}</option>)}</select></Field>}
+            {partVehicleMake && <Field label="Model"><select className={selectCls} value={partVehicleId} onChange={(e) => setPartVehicleId(e.target.value ? parseInt(e.target.value) : '')}><option value="">Select model...</option>{partModels.map((m) => <option key={m.id} value={m.id}>{m.model}{m.trim ? ` (${m.trim})` : ''}</option>)}</select></Field>}
           </div>
-        </div>
-      )}
+          <ModalFooter onCancel={() => setShowPartModal(false)} label="Create Part" />
+        </form>
+      </Modal>}
 
-      {/* Create Vehicle Modal */}
-      {showVehicleModal && (
-        <div className="modal-backdrop" onClick={() => setShowVehicleModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New Vehicle</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowVehicleModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreateVehicle}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Year (2000 or later)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={vehicleForm.year}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, year: parseInt(e.target.value) })}
-                    required
-                    min={2000}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Make</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={vehicleForm.make}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, make: e.target.value })}
-                    required
-                    placeholder="Honda"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Model</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={vehicleForm.model}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
-                    required
-                    placeholder="Civic"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Trim (optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={vehicleForm.trim}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, trim: e.target.value })}
-                    placeholder="EX"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowVehicleModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Vehicle</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showVehicleModal && <Modal title="Create New Vehicle" onClose={() => setShowVehicleModal(false)}>
+        <form onSubmit={handleCreateVehicle} className="space-y-4">
+          <Field label="Year"><input type="number" className={inputCls} value={vehicleForm.year} onChange={(e) => setVehicleForm({ ...vehicleForm, year: parseInt(e.target.value) })} required min={2000} /></Field>
+          <Field label="Make"><input type="text" className={inputCls} value={vehicleForm.make} onChange={(e) => setVehicleForm({ ...vehicleForm, make: e.target.value })} required placeholder="Honda" /></Field>
+          <Field label="Model"><input type="text" className={inputCls} value={vehicleForm.model} onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })} required placeholder="Civic" /></Field>
+          <Field label="Trim (optional)"><input type="text" className={inputCls} value={vehicleForm.trim} onChange={(e) => setVehicleForm({ ...vehicleForm, trim: e.target.value })} placeholder="EX" /></Field>
+          <ModalFooter onCancel={() => setShowVehicleModal(false)} label="Create Vehicle" />
+        </form>
+      </Modal>}
 
-      {/* Add Fitment Modal */}
-      {showFitmentModal && selectedPart && (
-        <div className="modal-backdrop" onClick={() => setShowFitmentModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add Fitment to {selectedPart.sku}</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowFitmentModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleAddFitment}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Year</label>
-                  <select
-                    className="form-select"
-                    value={fitYear}
-                    onChange={(e) => setFitYear(e.target.value ? parseInt(e.target.value) : '')}
-                    required
-                  >
-                    <option value="">Select year...</option>
-                    {Array.from({ length: 27 }, (_, i) => 2000 + i).reverse().map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-                {fitYear !== '' && (
-                  <div className="form-group">
-                    <label className="form-label">Make</label>
-                    <select
-                      className="form-select"
-                      value={fitMake}
-                      onChange={(e) => setFitMake(e.target.value)}
-                      required
-                    >
-                      <option value="">Select make...</option>
-                      {fitMakes.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {fitMake && (
-                  <div className="form-group">
-                    <label className="form-label">Model</label>
-                    <select
-                      className="form-select"
-                      value={fitVehicleId}
-                      onChange={(e) => setFitVehicleId(e.target.value ? parseInt(e.target.value) : '')}
-                      required
-                    >
-                      <option value="">Select model...</option>
-                      {fitModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.model}{m.trim ? ` (${m.trim})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowFitmentModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Fitment</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showFitmentModal && selectedPart && <Modal title={`Add Fitment to ${selectedPart.sku}`} onClose={() => setShowFitmentModal(false)}>
+        <form onSubmit={handleAddFitment} className="space-y-4">
+          <Field label="Year"><select className={selectCls} value={fitYear} onChange={(e) => setFitYear(e.target.value ? parseInt(e.target.value) : '')} required><option value="">Select year...</option>{yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}</select></Field>
+          {fitYear !== '' && <Field label="Make"><select className={selectCls} value={fitMake} onChange={(e) => setFitMake(e.target.value)} required><option value="">Select make...</option>{fitMakes.map((m) => <option key={m} value={m}>{m}</option>)}</select></Field>}
+          {fitMake && <Field label="Model"><select className={selectCls} value={fitVehicleId} onChange={(e) => setFitVehicleId(e.target.value ? parseInt(e.target.value) : '')} required><option value="">Select model...</option>{fitModels.map((m) => <option key={m.id} value={m.id}>{m.model}{m.trim ? ` (${m.trim})` : ''}</option>)}</select></Field>}
+          <ModalFooter onCancel={() => setShowFitmentModal(false)} label="Add Fitment" />
+        </form>
+      </Modal>}
 
-      {/* Create Group Modal */}
-      {showGroupModal && (
-        <div className="modal-backdrop" onClick={() => setShowGroupModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create Interchange Group</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowGroupModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreateGroup}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Group Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={groupForm.name}
-                    onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                    required
-                    placeholder="Front Brake Pads - Civic"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Description (optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={groupForm.description}
-                    onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-                    placeholder="Interchangeable front brake pads for Honda Civic 2016-2024"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowGroupModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Group</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showGroupModal && <Modal title="Create Interchange Group" onClose={() => setShowGroupModal(false)}>
+        <form onSubmit={handleCreateGroup} className="space-y-4">
+          <Field label="Group Name"><input type="text" className={inputCls} value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} required placeholder="Front Brake Pads - Civic" /></Field>
+          <Field label="Description (optional)"><input type="text" className={inputCls} value={groupForm.description} onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })} placeholder="Interchangeable parts" /></Field>
+          <ModalFooter onCancel={() => setShowGroupModal(false)} label="Create Group" />
+        </form>
+      </Modal>}
 
-      {/* Add to Group Modal */}
-      {showAddToGroupModal && selectedPart && (
-        <div className="modal-backdrop" onClick={() => setShowAddToGroupModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add {selectedPart.sku} to Interchange Group</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowAddToGroupModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleAddToGroup}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Select Group</label>
-                  <select
-                    className="form-select"
-                    value={selectedGroupId}
-                    onChange={(e) => setSelectedGroupId(e.target.value ? parseInt(e.target.value) : '')}
-                    required
-                  >
-                    <option value="">Choose a group...</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddToGroupModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add to Group</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showAddToGroupModal && selectedPart && <Modal title={`Add ${selectedPart.sku} to Group`} onClose={() => setShowAddToGroupModal(false)}>
+        <form onSubmit={handleAddToGroup} className="space-y-4">
+          <Field label="Select Group">
+            <select className={selectCls} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value ? parseInt(e.target.value) : '')} required>
+              <option value="">Choose a group...</option>
+              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </Field>
+          <ModalFooter onCancel={() => setShowAddToGroupModal(false)} label="Add to Group" />
+        </form>
+      </Modal>}
     </Layout>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function ModalFooter({ onCancel, label }: { onCancel: () => void; label: string }) {
+  return (
+    <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+      <button type="button" onClick={onCancel} className="px-4 py-2.5 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 transition-colors cursor-pointer">Cancel</button>
+      <button type="submit" className="px-4 py-2.5 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors cursor-pointer">{label}</button>
+    </div>
   );
 }

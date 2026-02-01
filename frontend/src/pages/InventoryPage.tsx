@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api, Part, Location, OnHand, InventoryEvent } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { Package, MapPin, ArrowDownToLine, PenLine, X, TrendingUp, TrendingDown, Box } from 'lucide-react';
 
 export function InventoryPage() {
   const { canFulfill, isManager } = useAuth();
@@ -12,28 +13,21 @@ export function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Modals
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
 
-  // Forms
   const [receiveForm, setReceiveForm] = useState({ partId: '', locationId: '', qty: 1, reason: '' });
   const [correctForm, setCorrectForm] = useState({ partId: '', locationId: '', qty: 0, reason: '' });
   const [locationName, setLocationName] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [onHandData, eventsData, partsData, locationsData] = await Promise.all([
-        api.getOnHand(),
-        api.getEvents(),
-        api.getParts(),
-        api.getLocations(),
+        api.getOnHand(), api.getEvents(), api.getParts(), api.getLocations(),
       ]);
       setOnHand(onHandData);
       setEvents(eventsData.events);
@@ -49,35 +43,21 @@ export function InventoryPage() {
   const handleReceive = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.receiveStock(
-        parseInt(receiveForm.partId),
-        parseInt(receiveForm.locationId),
-        receiveForm.qty,
-        receiveForm.reason || undefined
-      );
+      await api.receiveStock(parseInt(receiveForm.partId), parseInt(receiveForm.locationId), receiveForm.qty, receiveForm.reason || undefined);
       setShowReceiveModal(false);
       setReceiveForm({ partId: '', locationId: '', qty: 1, reason: '' });
       loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to receive stock');
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to receive stock'); }
   };
 
   const handleCorrect = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.correctStock(
-        parseInt(correctForm.partId),
-        parseInt(correctForm.locationId),
-        correctForm.qty,
-        correctForm.reason
-      );
+      await api.correctStock(parseInt(correctForm.partId), parseInt(correctForm.locationId), correctForm.qty, correctForm.reason);
       setShowCorrectModal(false);
       setCorrectForm({ partId: '', locationId: '', qty: 0, reason: '' });
       loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to correct stock');
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to correct stock'); }
   };
 
   const handleCreateLocation = async (e: React.FormEvent) => {
@@ -87,345 +67,204 @@ export function InventoryPage() {
       setShowLocationModal(false);
       setLocationName('');
       loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create location');
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to create location'); }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString();
+  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();
+
+  const totalQty = onHand.reduce((sum, i) => sum + i.quantity, 0);
+  const uniqueParts = new Set(onHand.map((i) => i.partId)).size;
+
+  const eventTypeBadge: Record<string, string> = {
+    RECEIVE: 'bg-emerald-500/10 text-emerald-400',
+    FULFILL: 'bg-blue-500/10 text-blue-400',
+    RETURN: 'bg-amber-500/10 text-amber-400',
+    CORRECTION: 'bg-purple-500/10 text-purple-400',
   };
 
-  const getEventBadgeClass = (type: string) => {
-    switch (type) {
-      case 'RECEIVE': return 'badge-fulfilled';
-      case 'FULFILL': return 'badge-approved';
-      case 'RETURN': return 'badge-pending';
-      case 'CORRECTION': return 'badge-cancelled';
-      default: return '';
-    }
-  };
+  const inputCls = "w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
 
   return (
     <Layout>
-      <div className="flex-between mb-6">
-        <h1>Inventory</h1>
-        <div className="flex gap-2">
-          {isManager && (
-            <>
-              <button className="btn btn-secondary" onClick={() => setShowLocationModal(true)}>
-                + Location
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowCorrectModal(true)}>
-                Correction
-              </button>
-            </>
-          )}
-          {canFulfill && (
-            <button className="btn btn-primary" onClick={() => setShowReceiveModal(true)}>
-              Receive Stock
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <div className="grid grid-2 mb-6">
-        {/* On-Hand Quantities */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">On-Hand Quantities</h3>
+      <div className="animate-fade-in">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Inventory</h1>
+            <p className="text-sm text-slate-500 mt-1">Track stock levels and movements</p>
           </div>
-          {loading ? (
-            <div className="card-body">Loading...</div>
-          ) : onHand.length === 0 ? (
-            <div className="empty-state">
-              <h3>No inventory</h3>
-              <p>Receive stock to get started</p>
-            </div>
-          ) : (
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Part</th>
-                    <th>Location</th>
-                    <th>Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {onHand.map((item, idx) => (
-                    <tr key={idx}>
-                      <td><strong>{item.part?.sku}</strong> - {item.part?.name}</td>
-                      <td>{item.location?.name}</td>
-                      <td>
-                        <strong style={{ color: item.quantity > 0 ? 'var(--success)' : 'var(--danger)' }}>
-                          {item.quantity}
-                        </strong>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {isManager && (
+              <>
+                <button onClick={() => setShowLocationModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><MapPin className="w-4 h-4" /> Location</button>
+                <button onClick={() => setShowCorrectModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><PenLine className="w-4 h-4" /> Correction</button>
+              </>
+            )}
+            {canFulfill && (
+              <button onClick={() => setShowReceiveModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer"><ArrowDownToLine className="w-4 h-4" /> Receive Stock</button>
+            )}
+          </div>
         </div>
 
-        {/* Locations */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Locations</h3>
-          </div>
-          {loading ? (
-            <div className="card-body">Loading...</div>
-          ) : locations.length === 0 ? (
-            <div className="empty-state">
-              <h3>No locations</h3>
-              <p>Create a location to track inventory</p>
-            </div>
-          ) : (
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Location Name</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {locations.map((loc) => (
-                    <tr key={loc.id}>
-                      <td>{loc.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+        {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
-      {/* Recent Events */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">Recent Inventory Events</h3>
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <StatCard icon={Box} label="Total Units" value={totalQty} color="amber" />
+          <StatCard icon={Package} label="Unique Parts" value={uniqueParts} color="blue" />
+          <StatCard icon={MapPin} label="Locations" value={locations.length} color="emerald" />
         </div>
-        {loading ? (
-          <div className="card-body">Loading...</div>
-        ) : events.length === 0 ? (
-          <div className="empty-state">
-            <h3>No events</h3>
-            <p>Inventory events will appear here</p>
+
+        {/* Two column: On-Hand + Locations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">On-Hand Quantities</h3></div>
+            {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : onHand.length === 0 ? (
+              <div className="p-8 text-center"><Package className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No inventory yet</p></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="border-b border-slate-800"><th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Part</th><th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th><th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th></tr></thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {onHand.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
+                        <td className="px-6 py-3"><span className="text-sm font-medium text-white">{item.part?.sku}</span> <span className="text-sm text-slate-400">— {item.part?.name}</span></td>
+                        <td className="px-6 py-3 text-sm text-slate-400">{item.location?.name}</td>
+                        <td className="px-6 py-3 text-right"><span className={`text-sm font-bold ${item.quantity > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.quantity}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Part</th>
-                  <th>Location</th>
-                  <th>Qty Change</th>
-                  <th>Reason</th>
-                  <th>User</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td>{formatDate(event.createdAt)}</td>
-                    <td>
-                      <span className={`badge ${getEventBadgeClass(event.type)}`}>
-                        {event.type}
-                      </span>
-                    </td>
-                    <td>{event.part?.sku}</td>
-                    <td>{event.location?.name}</td>
-                    <td>
-                      <strong style={{ color: event.qtyDelta >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {event.qtyDelta >= 0 ? '+' : ''}{event.qtyDelta}
-                      </strong>
-                    </td>
-                    <td>{event.reason || '-'}</td>
-                    <td>{event.user?.name}</td>
-                  </tr>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Locations</h3></div>
+            {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : locations.length === 0 ? (
+              <div className="p-8 text-center"><MapPin className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No locations yet</p></div>
+            ) : (
+              <div className="p-4 space-y-2">
+                {locations.map((loc) => (
+                  <div key={loc.id} className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-lg">
+                    <MapPin className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm text-white">{loc.name}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Events */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Recent Events</h3></div>
+          {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : events.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">No events yet</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead><tr className="border-b border-slate-800">
+                  {['Date', 'Type', 'Part', 'Location', 'Qty', 'Reason', 'User'].map((h) => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {events.map((ev) => (
+                    <tr key={ev.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-3 text-xs text-slate-400 whitespace-nowrap">{formatDate(ev.createdAt)}</td>
+                      <td className="px-6 py-3"><span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-md ${eventTypeBadge[ev.type] || ''}`}>{ev.type}</span></td>
+                      <td className="px-6 py-3 text-sm text-white">{ev.part?.sku}</td>
+                      <td className="px-6 py-3 text-sm text-slate-400">{ev.location?.name}</td>
+                      <td className="px-6 py-3">
+                        <span className={`flex items-center gap-1 text-sm font-bold ${ev.qtyDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {ev.qtyDelta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                          {ev.qtyDelta >= 0 ? '+' : ''}{ev.qtyDelta}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-400">{ev.reason || '—'}</td>
+                      <td className="px-6 py-3 text-sm text-slate-400">{ev.user?.name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Receive Stock Modal */}
-      {showReceiveModal && (
-        <div className="modal-backdrop" onClick={() => setShowReceiveModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Receive Stock</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowReceiveModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleReceive}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Part</label>
-                  <select
-                    className="form-select"
-                    value={receiveForm.partId}
-                    onChange={(e) => setReceiveForm({ ...receiveForm, partId: e.target.value })}
-                    required
-                  >
-                    <option value="">Select part...</option>
-                    {parts.map((p) => (
-                      <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Location</label>
-                  <select
-                    className="form-select"
-                    value={receiveForm.locationId}
-                    onChange={(e) => setReceiveForm({ ...receiveForm, locationId: e.target.value })}
-                    required
-                  >
-                    <option value="">Select location...</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Quantity</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={receiveForm.qty}
-                    onChange={(e) => setReceiveForm({ ...receiveForm, qty: parseInt(e.target.value) || 1 })}
-                    required
-                    min={1}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Reason (optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={receiveForm.reason}
-                    onChange={(e) => setReceiveForm({ ...receiveForm, reason: e.target.value })}
-                    placeholder="PO #12345"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowReceiveModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-success">Receive Stock</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      {showReceiveModal && <Modal title="Receive Stock" onClose={() => setShowReceiveModal(false)}>
+        <form onSubmit={handleReceive} className="space-y-4">
+          <Field label="Part"><select className={inputCls} value={receiveForm.partId} onChange={(e) => setReceiveForm({ ...receiveForm, partId: e.target.value })} required><option value="">Select part...</option>{parts.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}</select></Field>
+          <Field label="Location"><select className={inputCls} value={receiveForm.locationId} onChange={(e) => setReceiveForm({ ...receiveForm, locationId: e.target.value })} required><option value="">Select location...</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></Field>
+          <Field label="Quantity"><input type="number" className={inputCls} value={receiveForm.qty} onChange={(e) => setReceiveForm({ ...receiveForm, qty: parseInt(e.target.value) || 1 })} required min={1} /></Field>
+          <Field label="Reason (optional)"><input type="text" className={inputCls} value={receiveForm.reason} onChange={(e) => setReceiveForm({ ...receiveForm, reason: e.target.value })} placeholder="PO #12345" /></Field>
+          <ModalFooter onCancel={() => setShowReceiveModal(false)} label="Receive Stock" />
+        </form>
+      </Modal>}
 
-      {/* Correction Modal */}
-      {showCorrectModal && (
-        <div className="modal-backdrop" onClick={() => setShowCorrectModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Stock Correction</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowCorrectModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCorrect}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Part</label>
-                  <select
-                    className="form-select"
-                    value={correctForm.partId}
-                    onChange={(e) => setCorrectForm({ ...correctForm, partId: e.target.value })}
-                    required
-                  >
-                    <option value="">Select part...</option>
-                    {parts.map((p) => (
-                      <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Location</label>
-                  <select
-                    className="form-select"
-                    value={correctForm.locationId}
-                    onChange={(e) => setCorrectForm({ ...correctForm, locationId: e.target.value })}
-                    required
-                  >
-                    <option value="">Select location...</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Quantity Adjustment (+ or -)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={correctForm.qty}
-                    onChange={(e) => setCorrectForm({ ...correctForm, qty: parseInt(e.target.value) || 0 })}
-                    required
-                    placeholder="Use negative for decrease"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Reason (required)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={correctForm.reason}
-                    onChange={(e) => setCorrectForm({ ...correctForm, reason: e.target.value })}
-                    required
-                    placeholder="Physical count adjustment"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCorrectModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Apply Correction</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showCorrectModal && <Modal title="Stock Correction" onClose={() => setShowCorrectModal(false)}>
+        <form onSubmit={handleCorrect} className="space-y-4">
+          <Field label="Part"><select className={inputCls} value={correctForm.partId} onChange={(e) => setCorrectForm({ ...correctForm, partId: e.target.value })} required><option value="">Select part...</option>{parts.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}</select></Field>
+          <Field label="Location"><select className={inputCls} value={correctForm.locationId} onChange={(e) => setCorrectForm({ ...correctForm, locationId: e.target.value })} required><option value="">Select location...</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></Field>
+          <Field label="Qty Adjustment (+ or -)"><input type="number" className={inputCls} value={correctForm.qty} onChange={(e) => setCorrectForm({ ...correctForm, qty: parseInt(e.target.value) || 0 })} required /></Field>
+          <Field label="Reason (required)"><input type="text" className={inputCls} value={correctForm.reason} onChange={(e) => setCorrectForm({ ...correctForm, reason: e.target.value })} required placeholder="Physical count adjustment" /></Field>
+          <ModalFooter onCancel={() => setShowCorrectModal(false)} label="Apply Correction" />
+        </form>
+      </Modal>}
 
-      {/* Create Location Modal */}
-      {showLocationModal && (
-        <div className="modal-backdrop" onClick={() => setShowLocationModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create Location</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowLocationModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreateLocation}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Location Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={locationName}
-                    onChange={(e) => setLocationName(e.target.value)}
-                    required
-                    placeholder="Main Warehouse"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowLocationModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Location</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showLocationModal && <Modal title="Create Location" onClose={() => setShowLocationModal(false)}>
+        <form onSubmit={handleCreateLocation} className="space-y-4">
+          <Field label="Location Name"><input type="text" className={inputCls} value={locationName} onChange={(e) => setLocationName(e.target.value)} required placeholder="Main Warehouse" /></Field>
+          <ModalFooter onCancel={() => setShowLocationModal(false)} label="Create Location" />
+        </form>
+      </Modal>}
     </Layout>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+  const colors: Record<string, string> = {
+    amber: 'bg-amber-500/10 text-amber-400',
+    blue: 'bg-blue-500/10 text-blue-400',
+    emerald: 'bg-emerald-500/10 text-emerald-400',
+  };
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <div className="flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colors[color]}`}><Icon className="w-6 h-6" /></div>
+        <div>
+          <p className="text-2xl font-bold text-white">{value}</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{label}</label>{children}</div>;
+}
+
+function ModalFooter({ onCancel, label }: { onCancel: () => void; label: string }) {
+  return (
+    <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+      <button type="button" onClick={onCancel} className="px-4 py-2.5 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 transition-colors cursor-pointer">Cancel</button>
+      <button type="submit" className="px-4 py-2.5 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors cursor-pointer">{label}</button>
+    </div>
   );
 }

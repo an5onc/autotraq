@@ -41,11 +41,17 @@ export async function getVehicles(query: VehiclesQuery) {
   const where: Record<string, unknown> = {};
 
   if (search) {
-    where.OR = [
+    const searchConditions: Record<string, unknown>[] = [
       { make: { contains: search } },
       { model: { contains: search } },
       { trim: { contains: search } },
     ];
+    // If search looks like a year, also match year field
+    const yearNum = parseInt(search, 10);
+    if (!isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100) {
+      searchConditions.push({ year: yearNum });
+    }
+    where.OR = searchConditions;
   }
 
   if (year) where.year = year;

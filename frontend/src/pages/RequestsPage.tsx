@@ -181,8 +181,8 @@ export function RequestsPage() {
                         {parts.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}
                       </select>
                       <input type="number" className={`${inputCls} flex-[1]`} value={item.qty} onChange={(e) => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} min={1} placeholder="Qty" />
-                      <select className={`${inputCls} flex-[2]`} value={item.locationId} onChange={(e) => updateItem(idx, 'locationId', e.target.value)}>
-                        <option value="">Location (opt)</option>
+                      <select className={`${inputCls} flex-[2]`} value={item.locationId} onChange={(e) => updateItem(idx, 'locationId', e.target.value)} required>
+                        <option value="">Select location...</option>
                         {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                       </select>
                       {requestItems.length > 1 && (

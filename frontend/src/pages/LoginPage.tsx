@@ -130,7 +130,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-900 font-bold rounded-xl transition-colors mt-6 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-900 font-bold rounded-xl whitespace-nowrap transition-colors mt-6 cursor-pointer"
             >
               {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
               {!loading && <ChevronRight className="w-4 h-4" />}

@@ -82,15 +82,15 @@ export function InventoryPage() {
     CORRECTION: 'bg-purple-500/10 text-purple-400',
   };
 
-  const inputCls = "w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
+  const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
 
   return (
     <Layout>
       <div className="animate-fade-in">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-3xl font-bold text-white">Inventory</h1>
-            <p className="text-sm text-slate-500 mt-1">Track stock levels and movements</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Inventory</h1>
+            <p className="text-sm text-slate-500 mt-2">Track stock levels and movements</p>
           </div>
           <div className="flex gap-2">
             {isManager && (
@@ -108,7 +108,7 @@ export function InventoryPage() {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard icon={Box} label="Total Units" value={totalQty} color="amber" />
           <StatCard icon={Package} label="Unique Parts" value={uniqueParts} color="blue" />
           <StatCard icon={MapPin} label="Locations" value={locations.length} color="emerald" />
@@ -116,20 +116,20 @@ export function InventoryPage() {
 
         {/* Two column: On-Hand + Locations */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">On-Hand Quantities</h3></div>
-            {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : onHand.length === 0 ? (
-              <div className="p-8 text-center"><Package className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No inventory yet</p></div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">On-Hand Quantities</h3></div>
+            {loading ? <div className="p-16 text-center text-slate-500">Loading...</div> : onHand.length === 0 ? (
+              <div className="p-16 text-center"><Package className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No inventory yet</p></div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead><tr className="border-b border-slate-800"><th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Part</th><th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th><th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th></tr></thead>
+                  <thead><tr className="border-b border-slate-800"><th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Part</th><th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th><th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th></tr></thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {onHand.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
-                        <td className="px-6 py-3"><span className="text-sm font-medium text-white">{item.part?.sku}</span> <span className="text-sm text-slate-400">— {item.part?.name}</span></td>
-                        <td className="px-6 py-3 text-sm text-slate-400">{item.location?.name}</td>
-                        <td className="px-6 py-3 text-right"><span className={`text-sm font-bold ${item.quantity > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.quantity}</span></td>
+                        <td className="px-8 py-4"><span className="text-sm font-medium text-white">{item.part?.sku}</span> <span className="text-sm text-slate-400">— {item.part?.name}</span></td>
+                        <td className="px-8 py-4 text-sm text-slate-400">{item.location?.name}</td>
+                        <td className="px-8 py-4 text-right"><span className={`text-sm font-bold ${item.quantity > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.quantity}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -138,10 +138,10 @@ export function InventoryPage() {
             )}
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Locations</h3></div>
-            {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : locations.length === 0 ? (
-              <div className="p-8 text-center"><MapPin className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No locations yet</p></div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Locations</h3></div>
+            {loading ? <div className="p-16 text-center text-slate-500">Loading...</div> : locations.length === 0 ? (
+              <div className="p-16 text-center"><MapPin className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-500">No locations yet</p></div>
             ) : (
               <div className="p-4 space-y-2">
                 {locations.map((loc) => (
@@ -156,33 +156,33 @@ export function InventoryPage() {
         </div>
 
         {/* Events */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Recent Events</h3></div>
-          {loading ? <div className="p-8 text-center text-slate-500">Loading...</div> : events.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">No events yet</div>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="px-8 py-5 border-b border-slate-800"><h3 className="text-sm font-semibold text-white uppercase tracking-wider">Recent Events</h3></div>
+          {loading ? <div className="p-16 text-center text-slate-500">Loading...</div> : events.length === 0 ? (
+            <div className="p-16 text-center text-slate-500">No events yet</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead><tr className="border-b border-slate-800">
                   {['Date', 'Type', 'Part', 'Location', 'Qty', 'Reason', 'User'].map((h) => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr></thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {events.map((ev) => (
                     <tr key={ev.id} className="hover:bg-slate-800/50 transition-colors">
-                      <td className="px-6 py-3 text-xs text-slate-400 whitespace-nowrap">{formatDate(ev.createdAt)}</td>
-                      <td className="px-6 py-3"><span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-md ${eventTypeBadge[ev.type] || ''}`}>{ev.type}</span></td>
-                      <td className="px-6 py-3 text-sm text-white">{ev.part?.sku}</td>
-                      <td className="px-6 py-3 text-sm text-slate-400">{ev.location?.name}</td>
-                      <td className="px-6 py-3">
+                      <td className="px-8 py-4 text-xs text-slate-400 whitespace-nowrap">{formatDate(ev.createdAt)}</td>
+                      <td className="px-8 py-4"><span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-md ${eventTypeBadge[ev.type] || ''}`}>{ev.type}</span></td>
+                      <td className="px-8 py-4 text-sm text-white">{ev.part?.sku}</td>
+                      <td className="px-8 py-4 text-sm text-slate-400">{ev.location?.name}</td>
+                      <td className="px-8 py-4">
                         <span className={`flex items-center gap-1 text-sm font-bold ${ev.qtyDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {ev.qtyDelta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                           {ev.qtyDelta >= 0 ? '+' : ''}{ev.qtyDelta}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-sm text-slate-400">{ev.reason || '—'}</td>
-                      <td className="px-6 py-3 text-sm text-slate-400">{ev.user?.name}</td>
+                      <td className="px-8 py-4 text-sm text-slate-400">{ev.reason || '—'}</td>
+                      <td className="px-8 py-4 text-sm text-slate-400">{ev.user?.name}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -230,7 +230,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
     emerald: 'bg-emerald-500/10 text-emerald-400',
   };
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
       <div className="flex items-center gap-4">
         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colors[color]}`}><Icon className="w-6 h-6" /></div>
         <div>
@@ -246,25 +246,25 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-7 py-6">{children}</div>
       </div>
     </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{label}</label>{children}</div>;
+  return <div><label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">{label}</label>{children}</div>;
 }
 
 function ModalFooter({ onCancel, label }: { onCancel: () => void; label: string }) {
   return (
     <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-      <button type="button" onClick={onCancel} className="px-4 py-2.5 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 transition-colors cursor-pointer">Cancel</button>
-      <button type="submit" className="px-4 py-2.5 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors cursor-pointer">{label}</button>
+      <button type="button" onClick={onCancel} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white whitespace-nowrap transition-colors cursor-pointer">Cancel</button>
+      <button type="submit" className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">{label}</button>
     </div>
   );
 }

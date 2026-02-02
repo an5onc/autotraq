@@ -39,7 +39,7 @@ export function PartDetailPage() {
   const [saving, setSaving] = useState(false);
 
   const yearOptions = Array.from({ length: 27 }, (_, i) => 2000 + i).reverse();
-  const inputCls = "w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
+  const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
   const selectCls = inputCls;
 
   useEffect(() => { loadPart(); }, [id]);
@@ -188,7 +188,7 @@ export function PartDetailPage() {
     if (editingField === field) {
       return (
         <div>
-          <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">{label}</label>
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
           <input
             ref={editRef}
             className={inputCls}
@@ -206,7 +206,7 @@ export function PartDetailPage() {
         className={`group ${isManager ? 'cursor-pointer' : ''}`}
         onClick={() => startEdit(field, value)}
       >
-        <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">{label}</label>
+        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
         <div className="flex items-center gap-2">
           <span className={`text-white ${mono ? 'font-mono' : ''}`}>{value || <span className="text-slate-600 italic">Not set</span>}</span>
           {isManager && <Pencil className="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
@@ -257,7 +257,7 @@ export function PartDetailPage() {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}<button onClick={() => setError('')} className="ml-2 text-red-300 hover:text-red-200">×</button></div>}
 
         {/* Overview Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <EditableField field="name" value={part.name} label="Name" />
@@ -274,14 +274,14 @@ export function PartDetailPage() {
         </div>
 
         {/* Barcode Section */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" /> Barcode
           </h2>
           {part.barcodeData ? (
             <div className="flex items-center gap-6">
               <img src={`data:image/png;base64,${part.barcodeData}`} alt="Barcode" className="h-16" />
-              <button onClick={printBarcode} className="inline-flex items-center gap-3 px-5 py-2.5 bg-slate-800 whitespace-nowrap border border-slate-700 rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <button onClick={printBarcode} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white whitespace-nowrap hover:border-slate-600 transition-colors cursor-pointer">
                 <Printer className="w-4 h-4" /> Print
               </button>
             </div>
@@ -289,7 +289,7 @@ export function PartDetailPage() {
             <div className="flex items-center gap-4">
               <p className="text-sm text-slate-500">No barcode generated for this part.</p>
               {isManager && (
-                <button onClick={handleGenerateBarcode} disabled={saving} className="inline-flex items-center gap-3 px-6 py-3 bg-amber-500 whitespace-nowrap hover:bg-amber-400 text-slate-900 font-semibold rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50">
+                <button onClick={handleGenerateBarcode} disabled={saving} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50">
                   <BarChart3 className="w-4 h-4" /> Generate Barcode
                 </button>
               )}
@@ -299,7 +299,7 @@ export function PartDetailPage() {
 
         {/* SKU Decoded */}
         {skuDecoded && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">SKU Decoded</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
@@ -320,7 +320,7 @@ export function PartDetailPage() {
         )}
 
         {/* Fitments */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Car className="w-4 h-4" /> Fitments ({part.fitments?.length || 0})
@@ -349,7 +349,7 @@ export function PartDetailPage() {
                   {fitModels.map(m => <option key={m.id} value={m.id}>{m.model}{m.trim ? ` (${m.trim})` : ''}</option>)}
                 </select>
               </div>
-              <button type="submit" className="px-4 py-2 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors cursor-pointer">Add</button>
+              <button type="submit" className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">Add</button>
             </form>
           )}
 
@@ -374,7 +374,7 @@ export function PartDetailPage() {
         </div>
 
         {/* Interchange Groups */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Link2 className="w-4 h-4" /> Interchange Groups ({part.interchangeMembers?.length || 0})
@@ -393,7 +393,7 @@ export function PartDetailPage() {
                 <option value="">Choose a group...</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
-              <button type="submit" className="px-4 py-2 text-sm font-semibold text-slate-900 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors cursor-pointer">Add</button>
+              <button type="submit" className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">Add</button>
             </form>
           )}
 
@@ -424,12 +424,12 @@ export function PartDetailPage() {
 
         {/* Danger Zone */}
         {isManager && (
-          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-8 mb-10">
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-8 mb-8">
             <h2 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-2 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" /> Danger Zone
             </h2>
             <p className="text-sm text-slate-400 mb-4">Permanently delete this part and all its fitments and group memberships.</p>
-            <button onClick={() => setShowDeleteModal(true)} className="inline-flex items-center gap-3 px-5 py-2.5 bg-red-500 whitespace-nowrap/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg text-sm transition-colors cursor-pointer">
+            <button onClick={() => setShowDeleteModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">
               <Trash2 className="w-4 h-4" /> Delete Part
             </button>
           </div>
@@ -438,12 +438,12 @@ export function PartDetailPage() {
         {/* Delete Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800">
                 <h3 className="text-lg font-semibold text-white">Delete Part</h3>
                 <button onClick={() => setShowDeleteModal(false)} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
               </div>
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-7 py-6 space-y-4">
                 <p className="text-sm text-slate-400">
                   This will permanently delete <strong className="text-white">{part.name}</strong> and all associated fitments and group memberships.
                 </p>
@@ -457,11 +457,11 @@ export function PartDetailPage() {
                   placeholder={part.sku}
                 />
                 <div className="flex justify-end gap-3 pt-2">
-                  <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2.5 text-sm text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 transition-colors cursor-pointer">Cancel</button>
+                  <button onClick={() => setShowDeleteModal(false)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white whitespace-nowrap transition-colors cursor-pointer">Cancel</button>
                   <button
                     onClick={handleDelete}
                     disabled={deleteConfirm !== part.sku}
-                    className="px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-3 px-7 py-3.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-xl whitespace-nowrap transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Delete Forever
                   </button>

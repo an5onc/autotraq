@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api, Part, Location, Request } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { PartSearch } from '../components/PartSearch';
 import { ClipboardList, Plus, Check, Truck, X, Minus, Ban } from 'lucide-react';
 
 export function RequestsPage() {
   const { isManager, canFulfill } = useAuth();
+  const [searchParams] = useSearchParams();
   const [requests, setRequests] = useState<Request[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -19,11 +22,16 @@ export function RequestsPage() {
 
   useEffect(() => { loadData(); }, [statusFilter]);
 
+  // Auto-open create modal from sidebar link
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') setShowCreateModal(true);
+  }, [searchParams]);
+
   const loadData = async () => {
     try {
       setLoading(true);
       const [requestsData, partsData, locationsData] = await Promise.all([
-        api.getRequests(statusFilter || undefined), api.getParts(), api.getLocations(),
+        api.getRequests(statusFilter || undefined), api.getParts(undefined, undefined, 1000), api.getLocations(),
       ]);
       setRequests(requestsData.requests);
       setParts(partsData.parts);
@@ -176,10 +184,7 @@ export function RequestsPage() {
                 <div className="space-y-2">
                   {requestItems.map((item, idx) => (
                     <div key={idx} className="flex gap-2 items-center">
-                      <select className={`${inputCls} flex-[2]`} value={item.partId} onChange={(e) => updateItem(idx, 'partId', e.target.value)} required>
-                        <option value="">Select part...</option>
-                        {parts.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}
-                      </select>
+                      <PartSearch parts={parts} value={item.partId} onChange={(v) => updateItem(idx, 'partId', v)} required className="flex-[2]" />
                       <input type="number" className={`${inputCls} flex-[1]`} value={item.qty} onChange={(e) => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} min={1} placeholder="Qty" />
                       <select className={`${inputCls} flex-[2]`} value={item.locationId} onChange={(e) => updateItem(idx, 'locationId', e.target.value)} required>
                         <option value="">Select location...</option>

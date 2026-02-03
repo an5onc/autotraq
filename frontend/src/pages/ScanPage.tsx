@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api, SkuLookupResult, Part } from '../api/client';
 import { Layout } from '../components/Layout';
-import { Camera, Search, X, Printer, Usb, Zap, ExternalLink, AlertCircle } from 'lucide-react';
+import { Camera, X, Printer, Usb, Zap, AlertCircle } from 'lucide-react';
 
 export function ScanPage() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [manualSku, setManualSku] = useState('');
   const [result, setResult] = useState<SkuLookupResult | null>(null);
-  const [foundPart, setFoundPart] = useState<Part | null>(null);
+  const [_foundPart, setFoundPart] = useState<Part | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usbMode, setUsbMode] = useState(false);

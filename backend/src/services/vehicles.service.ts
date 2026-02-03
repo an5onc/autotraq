@@ -1,5 +1,5 @@
 import prisma from '../repositories/prisma.js';
-import { CreateVehicleInput, VehiclesQuery } from '../schemas/vehicles.schema.js';
+import { CreateVehicleInput, UpdateVehicleInput, VehiclesQuery } from '../schemas/vehicles.schema.js';
 
 // Domain rule: only vehicles year 2000 or newer (per CLAUDE.md Section 3)
 const MIN_YEAR = 2000;
@@ -41,11 +41,39 @@ export async function getVehicles(query: VehiclesQuery) {
   const where: Record<string, unknown> = {};
 
   if (search) {
-    where.OR = [
-      { make: { contains: search } },
-      { model: { contains: search } },
-      { trim: { contains: search } },
-    ];
+    // Split search into tokens so "2014 ford" matches year=2014 AND make=Ford
+    const tokens = search.trim().split(/\s+/).filter(Boolean);
+
+    const buildTokenConditions = (token: string) => {
+      const conditions: Record<string, unknown>[] = [
+        { make: { contains: token } },
+        { model: { contains: token } },
+        { trim: { contains: token } },
+      ];
+
+      // Year matching: support partial years (e.g. "201" matches 2010-2019)
+      if (/^\d+$/.test(token)) {
+        const num = parseInt(token, 10);
+        if (token.length === 4 && num >= 1900 && num <= 2100) {
+          // Exact 4-digit year
+          conditions.push({ year: num });
+        } else if (token.length < 4) {
+          // Partial year: "201" → 2010-2019, "20" → 2000-2099
+          const padded = token.padEnd(4, '0');
+          const low = parseInt(padded, 10);
+          const high = parseInt(token.padEnd(4, '9'), 10);
+          conditions.push({ year: { gte: low, lte: high } });
+        }
+      }
+
+      return conditions;
+    };
+
+    if (tokens.length > 1) {
+      where.AND = tokens.map(token => ({ OR: buildTokenConditions(token) }));
+    } else {
+      where.OR = buildTokenConditions(tokens[0]);
+    }
   }
 
   if (year) where.year = year;
@@ -117,4 +145,68 @@ export async function getDistinctModels(year: number, make: string) {
  */
 export function validateVehicleYear(year: number): boolean {
   return year >= MIN_YEAR;
+}
+
+export async function updateVehicle(id: number, input: UpdateVehicleInput) {
+  // Verify vehicle exists
+  const existing = await prisma.vehicle.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error('Vehicle not found');
+  }
+
+  // Validate year if provided
+  if (input.year !== undefined && input.year < MIN_YEAR) {
+    throw new Error(`Vehicle year must be ${MIN_YEAR} or later`);
+  }
+
+  // Check for duplicates if changing key fields
+  const newYear = input.year ?? existing.year;
+  const newMake = input.make ?? existing.make;
+  const newModel = input.model ?? existing.model;
+  const newTrim = input.trim !== undefined ? input.trim : existing.trim;
+
+  const duplicate = await prisma.vehicle.findFirst({
+    where: {
+      id: { not: id },
+      year: newYear,
+      make: newMake,
+      model: newModel,
+      trim: newTrim || null,
+    },
+  });
+
+  if (duplicate) {
+    throw new Error('A vehicle with these details already exists');
+  }
+
+  return prisma.vehicle.update({
+    where: { id },
+    data: {
+      ...(input.year !== undefined && { year: input.year }),
+      ...(input.make !== undefined && { make: input.make }),
+      ...(input.model !== undefined && { model: input.model }),
+      ...(input.trim !== undefined && { trim: input.trim }),
+    },
+  });
+}
+
+export async function deleteVehicle(id: number) {
+  // Verify vehicle exists
+  const existing = await prisma.vehicle.findUnique({
+    where: { id },
+    include: { fitments: true },
+  });
+
+  if (!existing) {
+    throw new Error('Vehicle not found');
+  }
+
+  // Check if vehicle has fitments - warn but allow deletion
+  if (existing.fitments.length > 0) {
+    // Fitments will be cascade deleted by Prisma schema
+    console.warn(`Deleting vehicle ${id} with ${existing.fitments.length} fitments`);
+  }
+
+  await prisma.vehicle.delete({ where: { id } });
+  return { message: 'Vehicle deleted successfully' };
 }

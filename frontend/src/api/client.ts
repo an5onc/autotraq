@@ -72,14 +72,87 @@ class ApiClient {
     });
   }
 
+  async barcodeLogin(barcode: string) {
+    return this.request<{ user: User; token: string }>('/auth/barcode-login', {
+      method: 'POST',
+      body: JSON.stringify({ barcode }),
+    });
+  }
+
   async me() {
     return this.request<User>('/auth/me');
   }
 
+  async getMyBarcode() {
+    return this.request<{ barcode: string | null }>('/auth/my-barcode');
+  }
+
+  // Role requests
+  async requestRolePromotion(requestedRole: string, reason?: string) {
+    return this.request<RoleRequest>('/auth/role-requests', {
+      method: 'POST',
+      body: JSON.stringify({ requestedRole, reason }),
+    });
+  }
+
+  async getRoleRequests(status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request<RoleRequest[]>(`/auth/role-requests${params}`);
+  }
+
+  async decideRoleRequest(id: number, approved: boolean) {
+    return this.request<RoleRequest>(`/auth/role-requests/${id}/decide`, {
+      method: 'POST',
+      body: JSON.stringify({ approved }),
+    });
+  }
+
+  // Admin user management
+  async adminCreateUser(email: string, password: string, name: string, role: string) {
+    return this.request<{ user: User; token: string }>('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name, role }),
+    });
+  }
+
+  async listUsers() {
+    return this.request<UserWithCreator[]>('/auth/users');
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async adminResetPassword(userId: number, newPassword: string) {
+    return this.request<{ message: string }>(`/auth/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  async deleteUser(userId: number) {
+    return this.request<{ message: string }>(`/auth/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async regenerateBarcode(userId: number) {
+    return this.request<{ barcode: string }>(`/auth/users/${userId}/regenerate-barcode`, {
+      method: 'POST',
+    });
+  }
+
   // Parts
-  async getParts(search?: string) {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${params}`);
+  async getParts(search?: string, page?: number, limit?: number) {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (page) p.set('page', String(page));
+    if (limit) p.set('limit', String(limit));
+    const qs = p.toString();
+    return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
   }
 
   async createPart(sku: string, name: string, description?: string) {
@@ -93,6 +166,37 @@ class ApiClient {
     return this.request<Part>(`/parts/${id}`);
   }
 
+  async updatePart(id: number, data: { sku?: string; name?: string; description?: string }) {
+    return this.request<Part>(`/parts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePart(id: number) {
+    return this.request<{ message: string }>(`/parts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async generatePartBarcode(id: number) {
+    return this.request<Part>(`/parts/${id}/generate-barcode`, {
+      method: 'POST',
+    });
+  }
+
+  async removeGroupMember(groupId: number, partId: number) {
+    return this.request<{ message: string }>(`/interchange-groups/${groupId}/members/${partId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async removeFitment(partId: number, vehicleId: number) {
+    return this.request<{ message: string }>(`/parts/${partId}/fitments/${vehicleId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async addFitment(partId: number, vehicleId: number) {
     return this.request<PartFitment>(`/parts/${partId}/fitments`, {
       method: 'POST',
@@ -101,9 +205,13 @@ class ApiClient {
   }
 
   // Vehicles
-  async getVehicles(search?: string) {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request<{ vehicles: Vehicle[]; pagination: Pagination }>(`/vehicles${params}`);
+  async getVehicles(search?: string, page?: number, limit?: number) {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (page) p.set('page', String(page));
+    if (limit) p.set('limit', String(limit));
+    const qs = p.toString();
+    return this.request<{ vehicles: Vehicle[]; pagination: Pagination }>(`/vehicles${qs ? '?' + qs : ''}`);
   }
 
   async getVehicleMakes(year: number) {
@@ -120,6 +228,19 @@ class ApiClient {
     return this.request<Vehicle>('/vehicles', {
       method: 'POST',
       body: JSON.stringify({ year, make, model, trim }),
+    });
+  }
+
+  async updateVehicle(id: number, data: { year?: number; make?: string; model?: string; trim?: string | null }) {
+    return this.request<Vehicle>(`/vehicles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVehicle(id: number) {
+    return this.request<{ message: string }>(`/vehicles/${id}`, {
+      method: 'DELETE',
     });
   }
 
@@ -169,6 +290,13 @@ class ApiClient {
     });
   }
 
+  async returnStock(partId: number, locationId: number, qty: number, reason: string) {
+    return this.request<InventoryEvent>('/inventory/return', {
+      method: 'POST',
+      body: JSON.stringify({ partId, locationId, qty, reason }),
+    });
+  }
+
   async getOnHand(partId?: number, locationId?: number) {
     const params = new URLSearchParams();
     if (partId) params.append('partId', String(partId));
@@ -206,6 +334,42 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  async cancelRequest(id: number) {
+    return this.request<Request>(`/requests/${id}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  // SKU / Barcode
+  async getMakeCodes() {
+    return this.request<MakeCode[]>('/sku/make-codes');
+  }
+
+  async getModelCodes(make?: string) {
+    const params = make ? `?make=${encodeURIComponent(make)}` : '';
+    return this.request<ModelCode[]>(`/sku/model-codes${params}`);
+  }
+
+  async getSystemCodes() {
+    return this.request<SystemCode[]>('/sku/system-codes');
+  }
+
+  async getComponentCodes(systemCode?: string) {
+    const params = systemCode ? `?system=${encodeURIComponent(systemCode)}` : '';
+    return this.request<ComponentCode[]>(`/sku/component-codes${params}`);
+  }
+
+  async generateSku(input: { make: string; model: string; year: number; systemCode: string; componentCode: string; position?: string }) {
+    return this.request<SkuGenerateResult>('/sku/generate', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async lookupSku(sku: string) {
+    return this.request<SkuLookupResult>(`/sku/lookup/${encodeURIComponent(sku)}`);
+  }
 }
 
 // Types
@@ -221,6 +385,8 @@ export interface Part {
   sku: string;
   name: string;
   description?: string;
+  barcodeData?: string;
+  skuDecoded?: string;
   fitments?: PartFitment[];
   interchangeMembers?: InterchangeGroupMember[];
 }
@@ -303,11 +469,82 @@ export interface RequestItem {
   location?: Location;
 }
 
+export interface MakeCode {
+  id: number;
+  make: string;
+  code: string;
+}
+
+export interface ModelCode {
+  id: number;
+  make: string;
+  model: string;
+  code: string;
+}
+
+export interface SystemCode {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+}
+
+export interface ComponentCode {
+  id: number;
+  systemCode: string;
+  name: string;
+  code: string;
+}
+
+export interface SkuGenerateResult {
+  sku: string;
+  decoded: {
+    make: string;
+    model: string;
+    year: number;
+    system: string;
+    component: string;
+    position: string | null;
+  };
+  barcode_png_base64: string;
+}
+
+export interface SkuLookupResult {
+  sku: string;
+  decoded: {
+    make: string;
+    model: string;
+    year: number;
+    system: string;
+    component: string;
+    position: string | null;
+  };
+  barcode_png_base64: string;
+}
+
 export interface Pagination {
   page: number;
   limit: number;
   total: number;
   totalPages: number;
+}
+
+export interface RoleRequest {
+  id: number;
+  userId: number;
+  requestedRole: string;
+  status: 'PENDING' | 'APPROVED' | 'DENIED';
+  reason?: string;
+  createdAt: string;
+  decidedAt?: string;
+  user?: { id: number; email: string; name: string; role: string };
+  decidedBy?: { id: number; name: string };
+}
+
+export interface UserWithCreator extends User {
+  loginBarcode?: string;
+  createdAt: string;
+  createdBy?: { id: number; name: string };
 }
 
 export const api = new ApiClient();

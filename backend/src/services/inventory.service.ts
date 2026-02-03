@@ -3,6 +3,7 @@ import { InventoryEventType } from '@prisma/client';
 import {
   ReceiveStockInput,
   CorrectStockInput,
+  ReturnStockInput,
   OnHandQuery,
   EventsQuery,
   CreateLocationInput,
@@ -56,6 +57,42 @@ export async function receiveStock(input: ReceiveStockInput, userId: number) {
   const event = await prisma.inventoryEvent.create({
     data: {
       type: InventoryEventType.RECEIVE,
+      qtyDelta: Math.abs(input.qty), // Ensure positive
+      partId: input.partId,
+      locationId: input.locationId,
+      reason: input.reason,
+      createdBy: userId,
+    },
+    include: {
+      part: true,
+      location: true,
+      user: { select: { id: true, name: true } },
+    },
+  });
+
+  return event;
+}
+
+/**
+ * Return stock - creates a RETURN event (positive qty, puts items back in inventory)
+ */
+export async function returnStock(input: ReturnStockInput, userId: number) {
+  // Validate part exists
+  const part = await prisma.part.findUnique({ where: { id: input.partId } });
+  if (!part) {
+    throw new Error('Part not found');
+  }
+
+  // Validate location exists
+  const location = await prisma.location.findUnique({ where: { id: input.locationId } });
+  if (!location) {
+    throw new Error('Location not found');
+  }
+
+  // Create inventory event (always positive for RETURN - adds back to inventory)
+  const event = await prisma.inventoryEvent.create({
+    data: {
+      type: InventoryEventType.RETURN,
       qtyDelta: Math.abs(input.qty), // Ensure positive
       partId: input.partId,
       locationId: input.locationId,

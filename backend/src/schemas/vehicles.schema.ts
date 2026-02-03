@@ -22,8 +22,21 @@ export const vehiclesQuerySchema = z.object({
   make: z.string().optional(),
   model: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(1000).optional().default(1000),
+});
+
+export const updateVehicleSchema = z.object({
+  year: z
+    .number()
+    .int()
+    .min(MIN_YEAR, `Vehicle year must be ${MIN_YEAR} or later`)
+    .max(MAX_YEAR, `Vehicle year cannot exceed ${MAX_YEAR}`)
+    .optional(),
+  make: z.string().min(1).max(50).optional(),
+  model: z.string().min(1).max(50).optional(),
+  trim: z.string().max(50).optional().nullable(),
 });
 
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
+export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 export type VehiclesQuery = z.infer<typeof vehiclesQuerySchema>;

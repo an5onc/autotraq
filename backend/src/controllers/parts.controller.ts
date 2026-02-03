@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import * as partsService from '../services/parts.service.js';
-import { CreatePartInput, AddFitmentInput, PartsQuery } from '../schemas/parts.schema.js';
+import { CreatePartInput, UpdatePartInput, AddFitmentInput, PartsQuery } from '../schemas/parts.schema.js';
 import { success, created, validationError, notFound, serverError } from '../utils/response.js';
 
 export async function createPart(req: AuthenticatedRequest, res: Response) {
@@ -41,6 +41,46 @@ export async function getPartById(req: AuthenticatedRequest, res: Response) {
       return;
     }
     console.error('Get part error:', err);
+    serverError(res);
+  }
+}
+
+export async function updatePart(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const input: UpdatePartInput = req.body;
+    const part = await partsService.updatePart(id, input);
+    success(res, part);
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Part not found') { notFound(res, err.message); return; }
+      if (err.message === 'SKU already exists') { validationError(res, err.message, { sku: 'SKU is already in use' }); return; }
+    }
+    console.error('Update part error:', err);
+    serverError(res);
+  }
+}
+
+export async function deletePart(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    await partsService.deletePart(id);
+    success(res, { message: 'Part deleted' });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Part not found') { notFound(res, err.message); return; }
+    console.error('Delete part error:', err);
+    serverError(res);
+  }
+}
+
+export async function generatePartBarcode(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const part = await partsService.generatePartBarcode(id);
+    success(res, part);
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Part not found') { notFound(res, err.message); return; }
+    console.error('Generate barcode error:', err);
     serverError(res);
   }
 }

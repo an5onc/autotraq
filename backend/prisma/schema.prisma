@@ -12,18 +12,50 @@ datasource db {
 // ============================================
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(viewer)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(viewer)
+  loginBarcode String?  @unique @map("login_barcode") // UUID for barcode login (admin & manager only)
+  createdById  Int?     @map("created_by_id") // tracks which admin created this user
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
+  createdBy       User?          @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers    User[]         @relation("UserCreator")
   inventoryEvents InventoryEvent[]
-  requestsCreated Request[]        @relation("RequestCreator")
+  requestsCreated Request[]      @relation("RequestCreator")
+  roleRequests    RoleRequest[]  @relation("RoleRequester")
+  roleDecisions   RoleRequest[]  @relation("RoleDecider")
 
   @@map("users")
+}
+
+// ============================================
+// Role Promotion Requests
+// ============================================
+
+model RoleRequest {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  requestedRole Role
+  status        RoleRequestStatus @default(PENDING)
+  reason        String?           @db.Text
+  decidedById   Int?              @map("decided_by_id")
+  createdAt     DateTime          @default(now())
+  decidedAt     DateTime?
+
+  user      User  @relation("RoleRequester", fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User? @relation("RoleDecider", fields: [decidedById], references: [id])
+
+  @@map("role_requests")
+}
+
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
 
 enum Role {
@@ -42,6 +74,8 @@ model Part {
   sku         String   @unique
   name        String
   description String?  @db.Text
+  barcodeData String?  @db.Text @map("barcode_data")
+  skuDecoded  String?  @db.Text @map("sku_decoded")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -193,6 +227,47 @@ enum RequestStatus {
   APPROVED
   FULFILLED
   CANCELLED
+}
+
+// ============================================
+// SKU / Barcode Code Tables
+// ============================================
+
+model MakeCode {
+  id   Int    @id @default(autoincrement())
+  make String @unique
+  code String @db.Char(2) @unique
+
+  @@map("make_codes")
+}
+
+model ModelCode {
+  id    Int    @id @default(autoincrement())
+  make  String
+  model String
+  code  String @db.Char(3)
+
+  @@unique([make, model])
+  @@map("model_codes")
+}
+
+model SystemCode {
+  id          Int    @id @default(autoincrement())
+  name        String
+  code        String @db.Char(2) @unique
+  description String? @db.Text
+
+  @@map("system_codes")
+}
+
+model ComponentCode {
+  id         Int    @id @default(autoincrement())
+  systemCode String @db.Char(2) @map("system_code")
+  name       String
+  code       String @db.Char(2)
+
+  @@unique([systemCode, code])
+  @@map("component_codes")
 }
 
 model RequestItem {

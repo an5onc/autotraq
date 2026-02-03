@@ -5,6 +5,7 @@ import { authenticate, requireManager, requireFulfillment } from '../middleware/
 import {
   receiveStockSchema,
   correctStockSchema,
+  returnStockSchema,
   onHandQuerySchema,
   eventsQuerySchema,
   createLocationSchema,
@@ -26,6 +27,9 @@ router.post('/receive', requireFulfillment, validateBody(receiveStockSchema), in
 
 // POST /api/inventory/correct - Correction (manager+)
 router.post('/correct', requireManager, validateBody(correctStockSchema), inventoryController.correctStock);
+
+// POST /api/inventory/return - Return stock (fulfillment+)
+router.post('/return', requireFulfillment, validateBody(returnStockSchema), inventoryController.returnStock);
 
 // GET /api/inventory/on-hand - Get on-hand quantities (all authenticated users)
 router.get('/on-hand', validateQuery(onHandQuerySchema), inventoryController.getOnHand);

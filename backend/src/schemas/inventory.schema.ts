@@ -31,8 +31,16 @@ export const createLocationSchema = z.object({
   name: z.string().min(1, 'Location name is required').max(100),
 });
 
+export const returnStockSchema = z.object({
+  partId: z.number().int().positive('Part ID is required'),
+  locationId: z.number().int().positive('Location ID is required'),
+  qty: z.number().int().positive('Quantity must be a positive integer'),
+  reason: z.string().min(1, 'Reason is required for returns'),
+});
+
 export type ReceiveStockInput = z.infer<typeof receiveStockSchema>;
 export type CorrectStockInput = z.infer<typeof correctStockSchema>;
+export type ReturnStockInput = z.infer<typeof returnStockSchema>;
 export type OnHandQuery = z.infer<typeof onHandQuerySchema>;
 export type EventsQuery = z.infer<typeof eventsQuerySchema>;
 export type CreateLocationInput = z.infer<typeof createLocationSchema>;

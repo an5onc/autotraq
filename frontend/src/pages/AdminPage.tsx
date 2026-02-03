@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { Barcode } from '../components/Barcode';
+import JsBarcode from 'jsbarcode';
+import { useSearchParams } from 'react-router-dom';
 import { api, UserWithCreator, RoleRequest } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import {
   Users, ShieldCheck, ShieldAlert, UserPlus, Check, X, RefreshCw,
-  QrCode, Printer, ChevronDown, ChevronUp, KeyRound, Lock,
+  QrCode, Printer, ChevronDown, ChevronUp, KeyRound, Lock, Trash2,
 } from 'lucide-react';
 
 type Tab = 'users' | 'requests' | 'create' | 'my-barcode' | 'security';
 
 export function AdminPage() {
   const { user, isAdmin } = useAuth();
-  const [tab, setTab] = useState<Tab>('users');
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as Tab) || (isAdmin ? 'users' : 'my-barcode');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [users, setUsers] = useState<UserWithCreator[]>([]);
   const [roleRequests, setRoleRequests] = useState<RoleRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +124,22 @@ export function AdminPage() {
     }
   };
 
+  const handleDeleteUser = async (u: UserWithCreator) => {
+    if (u.id === user?.id) {
+      setError("Can't delete your own account");
+      return;
+    }
+    if (!confirm(`Delete user "${u.name}" (${u.email})? This cannot be undone.`)) return;
+    setError('');
+    try {
+      await api.deleteUser(u.id);
+      setSuccess(`User "${u.name}" deleted`);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
   const handleRegenerateBarcode = async (userId: number) => {
     setError('');
     try {
@@ -133,34 +153,49 @@ export function AdminPage() {
   };
 
   const printBarcode = (barcode: string, userName: string) => {
+    // Render barcode to a temporary SVG, then serialize to embed in print
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    try {
+      JsBarcode(svgEl, barcode, {
+        format: 'CODE128',
+        width: 1.5,
+        height: 50,
+        displayValue: false,
+        margin: 4,
+        background: '#ffffff',
+        lineColor: '#000000',
+      });
+    } catch { return; }
+
+    const svgHtml = new XMLSerializer().serializeToString(svgEl);
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
     printWindow.document.write(`
       <html><head><title>Barcode - ${userName}</title>
       <style>
-        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: system-ui; }
-        .label { text-align: center; padding: 20px; }
-        h2 { margin: 0 0 8px; font-size: 18px; }
-        p { margin: 4px 0; color: #666; font-size: 12px; }
-        svg { margin: 16px 0; }
-        .code { font-family: monospace; font-size: 10px; color: #999; word-break: break-all; max-width: 300px; }
-        @media print { body { height: auto; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: 3.375in 2.125in; margin: 0; }
+        body { display: flex; align-items: center; justify-content: center; width: 3.375in; height: 2.125in; font-family: system-ui, -apple-system, sans-serif; }
+        .card { text-align: center; padding: 10px; width: 100%; }
+        .brand { font-size: 14px; font-weight: 900; letter-spacing: 3px; margin-bottom: 4px; }
+        .name { font-size: 11px; color: #333; margin-bottom: 8px; }
+        .barcode { margin: 0 auto 6px; }
+        .barcode svg { display: block; margin: 0 auto; max-width: 100%; }
+        .hint { font-size: 8px; color: #888; }
+        @media screen {
+          body { height: 100vh; width: 100vw; background: #f0f0f0; }
+          .card { background: white; width: 3.375in; height: 2.125in; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        }
       </style></head><body>
-      <div class="label">
-        <h2>AUTOTRAQ</h2>
-        <p>${userName}</p>
-        <div id="qr"></div>
-        <p class="code">${barcode}</p>
-        <p>Scan to log in</p>
+      <div class="card">
+        <div class="brand">AUTOTRAQ</div>
+        <div class="name">${userName}</div>
+        <div class="barcode">${svgHtml}</div>
+        <div class="hint">Scan to log in</div>
       </div>
-      <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"><\/script>
-      <script>
-        const canvas = document.createElement('canvas');
-        QRCode.toCanvas(canvas, '${barcode}', { width: 200, margin: 2 }, function() {
-          document.getElementById('qr').appendChild(canvas);
-          setTimeout(() => window.print(), 500);
-        });
-      <\/script>
+      <script>setTimeout(() => window.print(), 300)<\/script>
       </body></html>
     `);
     printWindow.document.close();
@@ -257,6 +292,14 @@ export function AdminPage() {
                     <KeyRound className="w-3.5 h-3.5" />
                     Reset PW
                   </button>
+                  {u.id !== user?.id && (
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {(u.role === 'admin' || u.role === 'manager') && (
                     <button
                       onClick={() => setExpandedBarcode(expandedBarcode === u.id ? null : u.id)}
@@ -304,19 +347,44 @@ export function AdminPage() {
               {/* Expanded barcode section */}
               {expandedBarcode === u.id && (u.role === 'admin' || u.role === 'manager') && (
                 <div className="mt-4 pt-4 border-t border-slate-800">
-                  <div className="flex items-start gap-6">
-                    <div className="bg-white p-3 rounded-xl">
-                      <QRCodeSVG
-                        value={userBarcodes[u.id] || u.loginBarcode || 'loading...'}
-                        size={120}
-                        level="M"
-                      />
+                  {u.id === user?.id ? (
+                    /* Show your own barcode */
+                    <div className="flex flex-col gap-4">
+                      <div className="bg-white p-3 rounded-xl inline-block self-start">
+                        <Barcode
+                          value={userBarcodes[u.id] || u.loginBarcode || ''}
+                          width={1.5}
+                          height={50}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-slate-500 mb-1">Your Login Barcode</p>
+                        <p className="text-xs text-slate-400 font-mono break-all mb-3">
+                          {userBarcodes[u.id] || u.loginBarcode || 'No barcode assigned'}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleRegenerateBarcode(u.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Regenerate
+                          </button>
+                          <button
+                            onClick={() => printBarcode(userBarcodes[u.id] || u.loginBarcode || '', u.name)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                          >
+                            <Printer className="w-3 h-3" /> Print
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-1">Login Barcode</p>
-                      <p className="text-xs text-slate-400 font-mono break-all mb-3">
-                        {userBarcodes[u.id] || u.loginBarcode || 'No barcode assigned'}
-                      </p>
+                  ) : (
+                    /* Other users — hide barcode, only allow print & regenerate */
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Login Barcode</p>
+                        <p className="text-xs text-slate-400">Barcode hidden for security</p>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleRegenerateBarcode(u.id)}
@@ -328,11 +396,11 @@ export function AdminPage() {
                           onClick={() => printBarcode(userBarcodes[u.id] || u.loginBarcode || '', u.name)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                         >
-                          <Printer className="w-3 h-3" /> Print
+                          <Printer className="w-3 h-3" /> Print Card
                         </button>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -487,9 +555,9 @@ export function AdminPage() {
           {myBarcode ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
               <h3 className="text-lg font-bold text-white mb-1">Your Login Barcode</h3>
-              <p className="text-sm text-slate-500 mb-6">Scan this QR code to log in</p>
+              <p className="text-sm text-slate-500 mb-6">Scan this barcode to log in</p>
               <div className="inline-block bg-white p-4 rounded-2xl mb-6">
-                <QRCodeSVG value={myBarcode} size={200} level="M" />
+                <Barcode value={myBarcode} width={2} height={70} />
               </div>
               <p className="text-xs text-slate-500 font-mono break-all mb-6">{myBarcode}</p>
               <div className="flex gap-3 justify-center">

@@ -133,6 +133,12 @@ class ApiClient {
     });
   }
 
+  async deleteUser(userId: number) {
+    return this.request<{ message: string }>(`/auth/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async regenerateBarcode(userId: number) {
     return this.request<{ barcode: string }>(`/auth/users/${userId}/regenerate-barcode`, {
       method: 'POST',

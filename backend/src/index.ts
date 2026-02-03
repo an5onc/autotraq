@@ -34,7 +34,7 @@ app.use(express.json());
 // Rate limiting for auth endpoints (per CLAUDE.md Section 7)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per window
+  max: 100, // 100 requests per window
   message: {
     error: {
       code: 'RATE_LIMITED',

@@ -28,5 +28,6 @@ router.get('/role-requests', authenticate, requireAdmin, authController.listRole
 router.post('/role-requests/:id/decide', authenticate, requireAdmin, validateBody(roleDecisionSchema), authController.decideRoleRequest);
 router.post('/users/:userId/regenerate-barcode', authenticate, requireAdmin, authController.regenerateBarcode);
 router.post('/users/:userId/reset-password', authenticate, requireAdmin, validateBody(adminResetPasswordSchema), authController.adminResetPassword);
+router.delete('/users/:userId', authenticate, requireAdmin, authController.deleteUser);
 
 export default router;

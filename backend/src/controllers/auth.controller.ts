@@ -176,6 +176,21 @@ export async function adminResetPassword(req: AuthenticatedRequest, res: Respons
   }
 }
 
+export async function deleteUser(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = parseInt(req.params.userId);
+    const result = await authService.deleteUser(userId, req.user!.userId);
+    success(res, result);
+  } catch (err) {
+    if (err instanceof Error) {
+      validationError(res, err.message);
+      return;
+    }
+    console.error('Delete user error:', err);
+    serverError(res);
+  }
+}
+
 export async function me(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) {

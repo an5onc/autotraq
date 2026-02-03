@@ -1,6 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'crypto';
+import { randomBytes } from 'crypto';
+
+function generateShortBarcode(): string {
+  return randomBytes(4).toString('hex').toUpperCase(); // 8 chars, e.g. 'A3F2B91C'
+}
 import prisma from '../repositories/prisma.js';
 import { RegisterInput, AdminCreateUserInput, LoginInput } from '../schemas/auth.schema.js';
 import { JwtPayload } from '../middleware/auth.middleware.js';
@@ -67,7 +71,7 @@ export async function adminCreateUser(input: AdminCreateUserInput, createdById: 
 
   // Generate barcode for admin and manager
   const loginBarcode = (input.role === 'admin' || input.role === 'manager')
-    ? randomUUID()
+    ? generateShortBarcode()
     : null;
 
   const user = await prisma.user.create({
@@ -150,7 +154,7 @@ export async function regenerateBarcode(userId: number): Promise<string> {
   if (user.role !== 'admin' && user.role !== 'manager') {
     throw new Error('Barcode login is only for admin and manager accounts');
   }
-  const newBarcode = randomUUID();
+  const newBarcode = generateShortBarcode();
   await prisma.user.update({
     where: { id: userId },
     data: { loginBarcode: newBarcode },
@@ -208,7 +212,7 @@ export async function decideRoleRequest(requestId: number, approved: boolean, de
 
   if (approved) {
     // Generate barcode for newly promoted manager
-    const loginBarcode = randomUUID();
+    const loginBarcode = generateShortBarcode();
 
     await prisma.$transaction([
       prisma.roleRequest.update({
@@ -268,6 +272,35 @@ export async function adminResetPassword(targetUserId: number, newPassword: stri
   const hashed = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await prisma.user.update({ where: { id: targetUserId }, data: { password: hashed } });
   return { message: 'Password reset successfully' };
+}
+
+// Admin delete user (cannot delete yourself)
+export async function deleteUser(targetUserId: number, requestingUserId: number) {
+  if (targetUserId === requestingUserId) {
+    throw new Error('Cannot delete your own account');
+  }
+  const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!user) throw new Error('User not found');
+
+  // Reassign all activity to the admin performing the delete
+  await prisma.$transaction([
+    // Reassign inventory events
+    prisma.inventoryEvent.updateMany({ where: { createdBy: targetUserId }, data: { createdBy: requestingUserId } }),
+    // Reassign requests they created
+    prisma.request.updateMany({ where: { createdBy: targetUserId }, data: { createdBy: requestingUserId } }),
+    // Reassign requests they approved/fulfilled
+    prisma.request.updateMany({ where: { approvedBy: targetUserId }, data: { approvedBy: requestingUserId } }),
+    prisma.request.updateMany({ where: { fulfilledBy: targetUserId }, data: { fulfilledBy: requestingUserId } }),
+    // Clear user-creator references
+    prisma.user.updateMany({ where: { createdById: targetUserId }, data: { createdById: null } }),
+    // Clear role requests
+    prisma.roleRequest.deleteMany({ where: { userId: targetUserId } }),
+    prisma.roleRequest.updateMany({ where: { decidedById: targetUserId }, data: { decidedById: null } }),
+    // Delete the user
+    prisma.user.delete({ where: { id: targetUserId } }),
+  ]);
+
+  return { message: `User "${user.name}" deleted. Their activity has been reassigned to you.` };
 }
 
 export async function getCurrentUser(userId: number) {

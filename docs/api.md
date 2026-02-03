@@ -2,38 +2,42 @@
 
 ## Base URL
 ```
-http://localhost:3001/api
+http://localhost:3002/api
 ```
 
 ## Authentication
 
-All endpoints except `/auth/register` and `/auth/login` require JWT authentication.
-
-Include the token in the Authorization header:
+Most endpoints require JWT authentication via the Authorization header:
 ```
 Authorization: Bearer <token>
 ```
 
-### Roles
-- `admin` - Full access
-- `manager` - Can manage parts, vehicles, approve requests
-- `fulfillment` - Can receive stock and fulfill requests
-- `viewer` - Read-only access
+### Login Methods
+- **Email/password** — For Fulfillment and Viewer accounts only
+- **Barcode** — For Admin and Manager accounts only (8-character Code 128)
+
+### Roles & Permissions
+| Role | Create Parts | Receive Stock | Corrections | Approve Requests | Manage Users |
+|------|:------------:|:-------------:|:-----------:|:----------------:|:------------:|
+| admin | ✅ | ✅ | ✅ | ✅ | ✅ |
+| manager | ✅ | ✅ | ✅ | ✅ | ❌ |
+| fulfillment | ❌ | ✅ | ❌ | ❌ | ❌ |
+| viewer | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
 ## Auth Endpoints
 
 ### POST /auth/register
-Register a new user.
+Register a new user. **Self-registration is limited to `fulfillment` or `viewer` roles.**
 
-**Request Body:**
+**Request:**
 ```json
 {
   "email": "user@example.com",
   "password": "password123",
   "name": "John Doe",
-  "role": "viewer"  // optional, defaults to "viewer"
+  "role": "fulfillment"
 }
 ```
 
@@ -45,7 +49,7 @@ Register a new user.
       "id": 1,
       "email": "user@example.com",
       "name": "John Doe",
-      "role": "viewer"
+      "role": "fulfillment"
     },
     "token": "eyJhbGc..."
   }
@@ -53,9 +57,9 @@ Register a new user.
 ```
 
 ### POST /auth/login
-Authenticate and get JWT token.
+Email/password login. **Only for `fulfillment` and `viewer` accounts.**
 
-**Request Body:**
+**Request:**
 ```json
 {
   "email": "user@example.com",
@@ -67,14 +71,44 @@ Authenticate and get JWT token.
 ```json
 {
   "data": {
-    "user": { ... },
+    "user": { "id": 1, "email": "...", "name": "...", "role": "fulfillment" },
+    "token": "eyJhbGc..."
+  }
+}
+```
+
+**Error (if admin/manager):**
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Admin and manager accounts must use barcode login"
+  }
+}
+```
+
+### POST /auth/barcode-login
+Barcode login. **Only for `admin` and `manager` accounts.**
+
+**Request:**
+```json
+{
+  "barcode": "42AB2039"
+}
+```
+
+**Response (200):**
+```json
+{
+  "data": {
+    "user": { "id": 1, "email": "...", "name": "...", "role": "admin" },
     "token": "eyJhbGc..."
   }
 }
 ```
 
 ### GET /auth/me
-Get current authenticated user. **Requires Auth.**
+Get current authenticated user.
 
 **Response (200):**
 ```json
@@ -84,47 +118,107 @@ Get current authenticated user. **Requires Auth.**
     "email": "user@example.com",
     "name": "John Doe",
     "role": "admin",
-    "createdAt": "2024-01-01T00:00:00.000Z"
+    "createdAt": "2026-02-01T..."
   }
 }
 ```
+
+### GET /auth/my-barcode
+Get current user's login barcode (admin/manager only).
+
+**Response (200):**
+```json
+{
+  "data": {
+    "barcode": "42AB2039"
+  }
+}
+```
+
+### POST /auth/change-password
+Change own password.
+
+**Request:**
+```json
+{
+  "currentPassword": "oldpassword",
+  "newPassword": "newpassword123"
+}
+```
+
+### POST /auth/role-requests
+Request role promotion to manager.
+
+**Request:**
+```json
+{
+  "requestedRole": "manager",
+  "reason": "I need to approve inventory corrections"
+}
+```
+
+### GET /auth/role-requests
+*Admin only.* List all role requests.
+
+**Query Params:** `?status=PENDING|APPROVED|DENIED`
+
+### POST /auth/role-requests/:id/decide
+*Admin only.* Approve or deny a role request.
+
+**Request:**
+```json
+{
+  "approved": true
+}
+```
+
+### POST /auth/users
+*Admin only.* Create a new user with any role.
+
+**Request:**
+```json
+{
+  "email": "newadmin@example.com",
+  "password": "password123",
+  "name": "New Admin",
+  "role": "admin"
+}
+```
+
+**Notes:**
+- Maximum 4 admin users allowed
+- Admin/manager accounts automatically get a barcode generated
+
+### GET /auth/users
+*Admin only.* List all users.
+
+### DELETE /auth/users/:userId
+*Admin only.* Delete a user. All their activity (inventory events, requests) is reassigned to the admin performing the delete.
+
+### POST /auth/users/:userId/reset-password
+*Admin only.* Reset a user's password.
+
+**Request:**
+```json
+{
+  "newPassword": "newpassword123"
+}
+```
+
+### POST /auth/users/:userId/regenerate-barcode
+*Admin only.* Generate a new login barcode for a user.
 
 ---
 
 ## Parts Endpoints
 
-### POST /parts
-Create a new part. **Requires: admin, manager**
-
-**Request Body:**
-```json
-{
-  "sku": "BRK-001",
-  "name": "Brake Pad Set",
-  "description": "Front brake pads for sedans"
-}
-```
-
-**Response (201):**
-```json
-{
-  "data": {
-    "id": 1,
-    "sku": "BRK-001",
-    "name": "Brake Pad Set",
-    "description": "Front brake pads for sedans",
-    "createdAt": "..."
-  }
-}
-```
-
 ### GET /parts
-List/search parts. **Requires Auth.**
+List parts with search and pagination.
 
-**Query Parameters:**
-- `search` - Search by SKU, name, or description
-- `page` - Page number (default: 1)
-- `limit` - Items per page (default: 20, max: 100)
+**Query Params:**
+- `search` — Search by SKU or name
+- `page` — Page number (default: 1)
+- `limit` — Items per page (default: 20, max: 5000)
 
 **Response (200):**
 ```json
@@ -134,229 +228,325 @@ List/search parts. **Requires Auth.**
     "pagination": {
       "page": 1,
       "limit": 20,
-      "total": 100,
-      "totalPages": 5
+      "total": 502,
+      "totalPages": 26
     }
   }
 }
 ```
 
-### GET /parts/:id
-Get part by ID with fitments and interchange groups. **Requires Auth.**
+### POST /parts
+*Manager+* Create a new part.
 
-### POST /parts/:id/fitments
-Add vehicle fitment to part. **Requires: admin, manager**
-
-**Request Body:**
+**Request:**
 ```json
 {
-  "vehicleId": 1
+  "sku": "TY-CAM-22-SUAS",
+  "name": "Air Spring - Toyota Camry 2022",
+  "description": "OEM replacement air spring"
 }
 ```
 
-### DELETE /parts/:id/fitments/:vehicleId
-Remove fitment. **Requires: admin, manager**
+### GET /parts/:id
+Get part by ID with fitments and interchange groups.
+
+### PUT /parts/:id
+*Manager+* Update a part.
+
+### DELETE /parts/:id
+*Manager+* Delete a part.
+
+### POST /parts/:id/generate-barcode
+*Manager+* Generate a Code 128 barcode for the part's SKU.
+
+### POST /parts/:id/fitments
+*Manager+* Add a vehicle fitment to a part.
+
+**Request:**
+```json
+{
+  "vehicleId": 123
+}
+```
+
+### DELETE /parts/:partId/fitments/:vehicleId
+*Manager+* Remove a fitment.
 
 ---
 
 ## Vehicles Endpoints
 
+### GET /vehicles
+List vehicles with search and pagination.
+
+**Query Params:**
+- `search` — Search by year, make, model (supports partial: "2020 toy", "camry")
+- `page`, `limit`
+
 ### POST /vehicles
-Create a new vehicle. **Requires: admin, manager**
+*Manager+* Create a vehicle. **Year must be ≥ 2000.**
 
-**Important:** Year must be 2000 or later.
-
-**Request Body:**
+**Request:**
 ```json
 {
-  "year": 2020,
-  "make": "Honda",
-  "model": "Civic",
-  "trim": "EX"  // optional
+  "year": 2022,
+  "make": "Toyota",
+  "model": "Camry",
+  "trim": "XLE"
 }
 ```
 
-### GET /vehicles
-List/search vehicles. **Requires Auth.**
+### GET /vehicles/makes
+Get all makes for a specific year.
 
-**Query Parameters:**
-- `search` - Search by make, model, or trim
-- `year` - Filter by year
-- `make` - Filter by make
-- `model` - Filter by model
+**Query Params:** `?year=2022`
+
+### GET /vehicles/models
+Get all models for a year and make.
+
+**Query Params:** `?year=2022&make=Toyota`
+
+### GET /vehicles/:id
+Get vehicle by ID.
+
+### PUT /vehicles/:id
+*Manager+* Update a vehicle.
+
+### DELETE /vehicles/:id
+*Manager+* Delete a vehicle.
 
 ---
 
 ## Interchange Groups Endpoints
 
-### POST /interchange-groups
-Create interchange group. **Requires: admin, manager**
+### GET /interchange-groups
+List all interchange groups with members.
 
-**Request Body:**
+### POST /interchange-groups
+*Manager+* Create an interchange group.
+
+**Request:**
 ```json
 {
-  "name": "Civic Brake Pads 2016-2024",
-  "description": "Interchangeable front brake pads"
+  "name": "Camry/Avalon Air Springs 2018-2024",
+  "description": "Interchangeable air springs"
 }
 ```
 
-### GET /interchange-groups
-List all groups with members. **Requires Auth.**
+### GET /interchange-groups/:id
+Get group by ID.
 
 ### POST /interchange-groups/:id/members
-Add part to group. **Requires: admin, manager**
+*Manager+* Add a part to a group.
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "partId": 1
+  "partId": 42
 }
 ```
 
-### DELETE /interchange-groups/:id/members/:partId
-Remove part from group. **Requires: admin, manager**
+### DELETE /interchange-groups/:groupId/members/:partId
+*Manager+* Remove a part from a group.
 
 ---
 
 ## Inventory Endpoints
 
-### POST /inventory/locations
-Create a location. **Requires: admin, manager**
-
-**Request Body:**
-```json
-{
-  "name": "Main Warehouse"
-}
-```
-
 ### GET /inventory/locations
-List all locations. **Requires Auth.**
+List all warehouse locations.
 
-### POST /inventory/receive
-Receive stock (creates RECEIVE event). **Requires: admin, manager, fulfillment**
+### POST /inventory/locations
+*Manager+* Create a new location.
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "partId": 1,
-  "locationId": 1,
-  "qty": 10,
-  "reason": "PO #12345"  // optional
-}
-```
-
-### POST /inventory/correct
-Stock correction. **Requires: admin, manager**
-
-**Request Body:**
-```json
-{
-  "partId": 1,
-  "locationId": 1,
-  "qty": -5,  // positive or negative
-  "reason": "Physical count adjustment"  // required
+  "name": "Warehouse B"
 }
 ```
 
 ### GET /inventory/on-hand
-Get on-hand quantities. **Requires Auth.**
+Get current on-hand quantities (calculated from event ledger).
 
-**Query Parameters:**
-- `partId` - Filter by part
-- `locationId` - Filter by location
+**Query Params:**
+- `partId` — Filter by part
+- `locationId` — Filter by location
 
-**Response (200):**
+**Response:**
 ```json
 {
   "data": [
     {
       "partId": 1,
       "locationId": 1,
-      "quantity": 10,
-      "part": { ... },
-      "location": { ... }
+      "quantity": 47,
+      "part": { "sku": "...", "name": "..." },
+      "location": { "name": "Main Warehouse" }
     }
   ]
 }
 ```
 
 ### GET /inventory/events
-Get inventory event history. **Requires Auth.**
+Get inventory event history.
 
-**Query Parameters:**
-- `partId` - Filter by part
-- `locationId` - Filter by location
-- `type` - Filter by type (RECEIVE, FULFILL, RETURN, CORRECTION)
+**Query Params:**
+- `partId`, `locationId` — Filters
+- `type` — RECEIVE, FULFILL, RETURN, CORRECTION
+- `page`, `limit`
+
+### POST /inventory/receive
+*Fulfillment+* Receive stock into inventory.
+
+**Request:**
+```json
+{
+  "partId": 1,
+  "locationId": 1,
+  "qty": 10,
+  "reason": "PO #1234"
+}
+```
+
+### POST /inventory/correct
+*Manager+* Stock correction (positive or negative).
+
+**Request:**
+```json
+{
+  "partId": 1,
+  "locationId": 1,
+  "qty": -3,
+  "reason": "Damaged in transit"
+}
+```
+
+### POST /inventory/return
+*Fulfillment+* Return stock.
+
+**Request:**
+```json
+{
+  "partId": 1,
+  "locationId": 1,
+  "qty": 2,
+  "reason": "Customer return - RMA #567"
+}
+```
 
 ---
 
 ## Requests Endpoints
 
-### POST /requests
-Create a request. **Requires Auth.**
+### GET /requests
+List requests with optional status filter.
 
-**Request Body:**
+**Query Params:** `?status=PENDING|APPROVED|FULFILLED|CANCELLED`
+
+### POST /requests
+Create a new request.
+
+**Request:**
 ```json
 {
   "items": [
-    {
-      "partId": 1,
-      "qtyRequested": 3,
-      "locationId": 1  // optional, specifies source location
-    }
+    { "partId": 1, "qtyRequested": 5, "locationId": 1 },
+    { "partId": 2, "qtyRequested": 2 }
   ],
-  "notes": "Urgent order"  // optional
+  "notes": "Urgent - customer waiting"
 }
 ```
 
-### GET /requests
-List requests. **Requires Auth.**
-
-**Query Parameters:**
-- `status` - Filter by status (PENDING, APPROVED, FULFILLED, CANCELLED)
-
 ### GET /requests/:id
-Get request details. **Requires Auth.**
+Get request by ID with items.
 
 ### POST /requests/:id/approve
-Approve a pending request. **Requires: admin, manager**
-
-Valid transition: PENDING → APPROVED
+*Manager+* Approve a pending request.
 
 ### POST /requests/:id/fulfill
-Fulfill an approved request. **Requires: admin, manager, fulfillment**
-
-Valid transition: APPROVED → FULFILLED
-
-This creates FULFILL inventory events and decreases on-hand.
+*Fulfillment+* Fulfill an approved request. Creates FULFILL inventory events.
 
 ### POST /requests/:id/cancel
-Cancel a request. **Requires: admin, manager**
+*Manager+* Cancel a request.
 
-Valid transitions: PENDING → CANCELLED, APPROVED → CANCELLED
+---
+
+## SKU Endpoints
+
+### GET /sku/make-codes
+Get all make codes (e.g., `TY` = Toyota).
+
+### GET /sku/model-codes
+Get model codes for a make.
+
+**Query Params:** `?make=Toyota`
+
+### GET /sku/system-codes
+Get all system codes (e.g., `SU` = Suspension).
+
+### GET /sku/component-codes
+Get component codes for a system.
+
+**Query Params:** `?system=SU`
+
+### POST /sku/generate
+Generate a structured SKU.
+
+**Request:**
+```json
+{
+  "make": "Toyota",
+  "model": "Camry",
+  "year": 2022,
+  "systemCode": "SU",
+  "componentCode": "AS",
+  "position": "FR"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "sku": "TY-CAM-22-SUAS-FR",
+    "decoded": { ... },
+    "barcode_png_base64": "..."
+  }
+}
+```
+
+### GET /sku/lookup/:sku
+Decode a SKU back to human-readable data.
 
 ---
 
 ## Error Responses
 
 All errors follow this format:
+
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Human readable message",
+    "message": "Human-readable message",
     "details": {
-      "field": "Error for this field"
+      "field": "Specific field error"
     }
   }
 }
 ```
 
-### Error Codes
-- `VALIDATION_ERROR` (400) - Invalid input
-- `UNAUTHORIZED` (401) - Missing or invalid token
-- `FORBIDDEN` (403) - Insufficient permissions
-- `NOT_FOUND` (404) - Resource not found
-- `RATE_LIMITED` (429) - Too many requests
-- `SERVER_ERROR` (500) - Internal error
+**Error Codes:**
+- `VALIDATION_ERROR` — Invalid input (400)
+- `UNAUTHORIZED` — Missing/invalid token (401)
+- `FORBIDDEN` — Insufficient permissions (403)
+- `NOT_FOUND` — Resource not found (404)
+- `RATE_LIMITED` — Too many requests (429)
+- `SERVER_ERROR` — Internal error (500)
+
+---
+
+## Rate Limiting
+
+Auth endpoints are rate-limited to **100 requests per 15 minutes** per IP.

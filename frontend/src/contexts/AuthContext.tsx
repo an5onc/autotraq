@@ -5,6 +5,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  barcodeLogin: (barcode: string) => Promise<void>;
   register: (email: string, password: string, name: string, role?: string) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
@@ -39,6 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   };
 
+  const barcodeLogin = async (barcode: string) => {
+    const { user, token } = await api.barcodeLogin(barcode);
+    api.setToken(token);
+    setUser(user);
+  };
+
   const register = async (email: string, password: string, name: string, role?: string) => {
     const { user, token } = await api.register(email, password, name, role);
     api.setToken(token);
@@ -55,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canFulfill = isManager || user?.role === 'fulfillment';
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin, isManager, canFulfill }}>
+    <AuthContext.Provider value={{ user, loading, login, barcodeLogin, register, logout, isAdmin, isManager, canFulfill }}>
       {children}
     </AuthContext.Provider>
   );

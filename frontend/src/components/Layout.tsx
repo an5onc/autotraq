@@ -5,6 +5,7 @@ import {
   Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine,
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
+  Users, UserPlus, ShieldAlert, QrCode,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -24,7 +25,8 @@ interface NavItem {
   subItems?: SubItem[];
 }
 
-const navItems: NavItem[] = [
+// Admin nav is added dynamically based on role
+const baseNavItems: NavItem[] = [
   {
     to: '/parts',
     icon: Wrench,
@@ -79,10 +81,26 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin, isManager } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const adminNavItem: NavItem = {
+    to: '/admin',
+    icon: Shield,
+    label: 'Admin',
+    subItems: [
+      { label: 'Users', to: '/admin?tab=users', icon: Users },
+      { label: 'Role Requests', to: '/admin?tab=requests', icon: ShieldAlert },
+      { label: 'Create User', to: '/admin?tab=create', icon: UserPlus },
+      { label: 'My Barcode', to: '/admin?tab=my-barcode', icon: QrCode },
+    ],
+  };
+
+  const navItems: NavItem[] = (isAdmin || isManager)
+    ? [...baseNavItems, adminNavItem]
+    : baseNavItems;
+
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     const active = navItems.find(item => location.pathname.startsWith(item.to));
     return new Set(active ? [active.to] : []);

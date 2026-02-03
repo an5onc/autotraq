@@ -13,7 +13,7 @@ export const addFitmentSchema = z.object({
 export const partsQuerySchema = z.object({
   search: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  limit: z.coerce.number().int().positive().max(5000).optional().default(20),
 });
 
 export const idParamSchema = z.object({

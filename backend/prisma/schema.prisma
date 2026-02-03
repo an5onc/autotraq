@@ -12,18 +12,50 @@ datasource db {
 // ============================================
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(viewer)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(viewer)
+  loginBarcode String?  @unique @map("login_barcode") // UUID for barcode login (admin & manager only)
+  createdById  Int?     @map("created_by_id") // tracks which admin created this user
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
+  createdBy       User?          @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers    User[]         @relation("UserCreator")
   inventoryEvents InventoryEvent[]
-  requestsCreated Request[]        @relation("RequestCreator")
+  requestsCreated Request[]      @relation("RequestCreator")
+  roleRequests    RoleRequest[]  @relation("RoleRequester")
+  roleDecisions   RoleRequest[]  @relation("RoleDecider")
 
   @@map("users")
+}
+
+// ============================================
+// Role Promotion Requests
+// ============================================
+
+model RoleRequest {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  requestedRole Role
+  status        RoleRequestStatus @default(PENDING)
+  reason        String?           @db.Text
+  decidedById   Int?              @map("decided_by_id")
+  createdAt     DateTime          @default(now())
+  decidedAt     DateTime?
+
+  user      User  @relation("RoleRequester", fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User? @relation("RoleDecider", fields: [decidedById], references: [id])
+
+  @@map("role_requests")
+}
+
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
 
 enum Role {

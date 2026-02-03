@@ -72,8 +72,71 @@ class ApiClient {
     });
   }
 
+  async barcodeLogin(barcode: string) {
+    return this.request<{ user: User; token: string }>('/auth/barcode-login', {
+      method: 'POST',
+      body: JSON.stringify({ barcode }),
+    });
+  }
+
   async me() {
     return this.request<User>('/auth/me');
+  }
+
+  async getMyBarcode() {
+    return this.request<{ barcode: string | null }>('/auth/my-barcode');
+  }
+
+  // Role requests
+  async requestRolePromotion(requestedRole: string, reason?: string) {
+    return this.request<RoleRequest>('/auth/role-requests', {
+      method: 'POST',
+      body: JSON.stringify({ requestedRole, reason }),
+    });
+  }
+
+  async getRoleRequests(status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request<RoleRequest[]>(`/auth/role-requests${params}`);
+  }
+
+  async decideRoleRequest(id: number, approved: boolean) {
+    return this.request<RoleRequest>(`/auth/role-requests/${id}/decide`, {
+      method: 'POST',
+      body: JSON.stringify({ approved }),
+    });
+  }
+
+  // Admin user management
+  async adminCreateUser(email: string, password: string, name: string, role: string) {
+    return this.request<{ user: User; token: string }>('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name, role }),
+    });
+  }
+
+  async listUsers() {
+    return this.request<UserWithCreator[]>('/auth/users');
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async adminResetPassword(userId: number, newPassword: string) {
+    return this.request<{ message: string }>(`/auth/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  async regenerateBarcode(userId: number) {
+    return this.request<{ barcode: string }>(`/auth/users/${userId}/regenerate-barcode`, {
+      method: 'POST',
+    });
   }
 
   // Parts
@@ -458,6 +521,24 @@ export interface Pagination {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+export interface RoleRequest {
+  id: number;
+  userId: number;
+  requestedRole: string;
+  status: 'PENDING' | 'APPROVED' | 'DENIED';
+  reason?: string;
+  createdAt: string;
+  decidedAt?: string;
+  user?: { id: number; email: string; name: string; role: string };
+  decidedBy?: { id: number; name: string };
+}
+
+export interface UserWithCreator extends User {
+  loginBarcode?: string;
+  createdAt: string;
+  createdBy?: { id: number; name: string };
 }
 
 export const api = new ApiClient();

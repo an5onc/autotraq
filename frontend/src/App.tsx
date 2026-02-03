@@ -8,6 +8,7 @@ import { RequestsPage } from './pages/RequestsPage';
 import { VehiclesPage } from './pages/VehiclesPage';
 import { ScanPage } from './pages/ScanPage';
 import { PartDetailPage } from './pages/PartDetailPage';
+import { AdminPage } from './pages/AdminPage';
 
 function App() {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ function App() {
       <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
       <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
       <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/parts" replace />} />
       <Route path="*" element={<Navigate to="/parts" replace />} />
     </Routes>

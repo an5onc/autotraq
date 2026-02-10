@@ -108,11 +108,11 @@
 - [ ] **Email notifications** (optional) — deferred
 - [ ] **Suggested reorder quantities** — deferred
 
-### 3.3 Bulk Operations
+### 3.3 Bulk Operations ✅
 - [x] **Bulk receive** — add multiple parts, set quantities, confirm all at once
 - [ ] **Bulk update** — select multiple parts, apply changes (deferred)
 - [x] **CSV export** — full parts catalog with inventory (on Parts page)
-- [x] **CSV import** — parts with preview, validation, and batch create
+- [x] **CSV import** — parts with preview, validation, and batch create (manager-only)
 
 ### 3.4 UI Enhancements
 - [x] **Toast notifications** — react-hot-toast, success/error feedback
@@ -248,4 +248,4 @@
 
 ---
 
-*Last updated: Feb 9, 2026*
+*Last updated: Feb 10, 2026*

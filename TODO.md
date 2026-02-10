@@ -229,6 +229,16 @@
 - [ ] Add `minStock` field to Part model (deferred to Phase 3)
 - [ ] Per-part threshold configuration (deferred)
 
+### Feature 4: Part Condition Tracking ✅ (added 12:33 AM)
+- [x] PartCondition enum (NEW, EXCELLENT, GOOD, FAIR, POOR, CORE, SALVAGE, UNKNOWN)
+- [x] Condition field in Part model
+- [x] ConditionBadge component with color-coded labels
+- [x] ConditionSelect dropdown for editing
+- [x] Condition column in Parts table
+- [x] Condition field in Create Part modal
+- [x] Editable condition in Part Detail page (managers only)
+- [x] Migration SQL ready to apply
+
 ### Feature 3: Global Command Bar (⌘K) ✅
 - [x] CommandBar component with keyboard trigger (⌘K / Ctrl+K)
 - [x] Search across parts, vehicles (live API search)

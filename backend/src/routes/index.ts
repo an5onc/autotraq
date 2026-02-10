@@ -7,6 +7,7 @@ import inventoryRoutes from './inventory.routes.js';
 import requestsRoutes from './requests.routes.js';
 import skuRoutes from './sku.routes.js';
 import auditRoutes from './audit.routes.js';
+import imagesRoutes, { partImagesRouter } from './images.routes.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import * as interchangeController from '../controllers/interchange.controller.js';
 
@@ -24,6 +25,8 @@ router.use('/locations', inventoryRoutes); // Locations are under inventory rout
 router.use('/requests', requestsRoutes);
 router.use('/sku', skuRoutes);
 router.use('/audit', auditRoutes);
+router.use('/images', imagesRoutes);
+router.use('/parts/:partId/images', partImagesRouter);
 
 // Additional utility route: get interchangeable parts for a specific part
 router.get(

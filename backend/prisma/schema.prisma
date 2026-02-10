@@ -86,8 +86,24 @@ model Part {
   interchangeMembers InterchangeGroupMember[]
   inventoryEvents    InventoryEvent[]
   requestItems       RequestItem[]
+  images             PartImage[]
 
   @@map("parts")
+}
+
+model PartImage {
+  id        Int      @id @default(autoincrement())
+  partId    Int      @map("part_id")
+  filename  String   // Original filename
+  mimeType  String   @map("mime_type") // image/jpeg, image/png, etc.
+  data      String   @db.LongText // Base64 encoded image data
+  isPrimary Boolean  @default(false) @map("is_primary") // Primary/thumbnail image
+  createdAt DateTime @default(now()) @map("created_at")
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@map("part_images")
 }
 
 enum PartCondition {

@@ -403,6 +403,59 @@ class ApiClient {
   async lookupSku(sku: string) {
     return this.request<SkuLookupResult>(`/sku/lookup/${encodeURIComponent(sku)}`);
   }
+
+  // ============================================
+  // Part Images
+  // ============================================
+
+  async getPartImages(partId: number) {
+    return this.request<PartImage[]>(`/parts/${partId}/images`);
+  }
+
+  async uploadPartImage(partId: number, file: File, isPrimary?: boolean): Promise<PartImage> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(',')[1]; // Remove data:... prefix
+          const result = await this.request<PartImage>(`/parts/${partId}/images`, {
+            method: 'POST',
+            body: JSON.stringify({
+              filename: file.name,
+              mimeType: file.type,
+              data: base64,
+              isPrimary,
+            }),
+          });
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async getImage(imageId: number) {
+    return this.request<PartImageFull>(`/images/${imageId}`);
+  }
+
+  getImageUrl(imageId: number) {
+    return `${API_BASE}/images/${imageId}/raw`;
+  }
+
+  async setImagePrimary(imageId: number) {
+    return this.request<{ id: number; isPrimary: boolean }>(`/images/${imageId}/primary`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deleteImage(imageId: number) {
+    return this.request<{ deleted: boolean }>(`/images/${imageId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Types
@@ -438,6 +491,20 @@ export interface Part {
   skuDecoded?: string;
   fitments?: PartFitment[];
   interchangeMembers?: InterchangeGroupMember[];
+  images?: PartImage[];
+}
+
+export interface PartImage {
+  id: number;
+  filename: string;
+  mimeType: string;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface PartImageFull extends PartImage {
+  partId: number;
+  data: string; // Base64 encoded
 }
 
 export interface Vehicle {

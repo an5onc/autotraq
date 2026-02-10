@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { api, Part, InterchangeGroup, PartCondition, PART_CONDITIONS } from '../api/client';
+import { api, Part, PartImage, InterchangeGroup, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge, ConditionSelect } from '../components/ConditionBadge';
-import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle } from 'lucide-react';
+import { ImageGallery } from '../components/ImageGallery';
+import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle, Camera } from 'lucide-react';
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export function PartDetailPage() {
   const { isManager } = useAuth();
 
   const [part, setPart] = useState<Part | null>(null);
+  const [images, setImages] = useState<PartImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -44,11 +46,21 @@ export function PartDetailPage() {
   const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
   const selectCls = inputCls;
 
-  useEffect(() => { loadPart(); }, [id]);
+  useEffect(() => { loadPart(); loadImages(); }, [id]);
 
   useEffect(() => {
     if (editingField && editRef.current) editRef.current.focus();
   }, [editingField]);
+
+  const loadImages = async () => {
+    if (!id) return;
+    try {
+      const imgs = await api.getPartImages(parseInt(id, 10));
+      setImages(imgs);
+    } catch (err) {
+      console.error('Failed to load images:', err);
+    }
+  };
 
   // Fitment cascading
   useEffect(() => {
@@ -376,7 +388,7 @@ export function PartDetailPage() {
             </div>
           ) : (
             <div className="flex items-center gap-4">
-              <p className="text-sm text-slate-500">No barcode generated for this part.</p>
+              <p className="text-sm text-slate-500">No barcode generated for this part (manual SKU).</p>
               {isManager && (
                 <button onClick={handleGenerateBarcode} disabled={saving} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50">
                   <BarChart3 className="w-4 h-4" /> Generate Barcode
@@ -384,6 +396,19 @@ export function PartDetailPage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Images */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Camera className="w-4 h-4" /> Images ({images.length})
+          </h2>
+          <ImageGallery
+            partId={part.id}
+            images={images}
+            canEdit={isManager}
+            onImagesChange={loadImages}
+          />
         </div>
 
         {/* SKU Decoded */}

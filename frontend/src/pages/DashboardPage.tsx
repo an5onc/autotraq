@@ -15,8 +15,11 @@ import {
   TrendingDown,
   Clock,
   User,
-  DollarSign
+  DollarSign,
+  Activity,
+  Archive
 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardStats {
   totalParts: number;
@@ -28,9 +31,30 @@ interface DashboardStats {
   lowStockParts: (Part & { onHand: number })[];
 }
 
+interface HistoryPoint {
+  date: string;
+  total: number;
+}
+
+interface TopMover {
+  part: Part;
+  eventCount: number;
+  netChange: number;
+}
+
+interface DeadStockItem {
+  part: Part;
+  quantity: number;
+  lastActivity: string | null;
+  daysSinceActivity: number | null;
+}
+
 export function DashboardPage() {
   const { user, isManager } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [topMovers, setTopMovers] = useState<TopMover[]>([]);
+  const [deadStock, setDeadStock] = useState<DeadStockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -91,6 +115,18 @@ export function DashboardPage() {
         recentEvents: eventsRes.events.slice(0, 8),
         lowStockParts,
       });
+
+      // Load analytics data in background
+      Promise.all([
+        api.getInventoryHistory(30),
+        api.getTopMovers(30, 5),
+        api.getDeadStock(90, 5),
+      ]).then(([historyData, moversData, deadData]) => {
+        setHistory(historyData);
+        setTopMovers(moversData);
+        setDeadStock(deadData);
+      }).catch(() => {/* ignore analytics errors */});
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
     } finally {
@@ -204,6 +240,111 @@ export function DashboardPage() {
             {isManager && <QuickAction icon={ClipboardList} label="View Requests" to="/requests" />}
           </div>
         </div>
+
+        {/* Inventory Chart */}
+        {history.length > 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Inventory Levels (30 Days)</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#64748b" 
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                    labelStyle={{ color: '#94a3b8' }}
+                    itemStyle={{ color: '#f59e0b' }}
+                    labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2}
+                    dot={false}
+                    name="Total Units"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Row */}
+        {(topMovers.length > 0 || deadStock.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Top Movers */}
+            {topMovers.length > 0 && (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" /> Top Movers (30 Days)
+                </h2>
+                <div className="space-y-3">
+                  {topMovers.map((item, i) => (
+                    <Link 
+                      key={item.part.id} 
+                      to={`/parts/${item.part.id}`}
+                      className="flex items-center gap-4 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{item.part.name}</p>
+                        <p className="text-xs text-slate-500 font-mono">{item.part.sku}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-white">{item.eventCount} events</p>
+                        <p className={`text-xs ${item.netChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {item.netChange >= 0 ? '+' : ''}{item.netChange} net
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dead Stock */}
+            {deadStock.length > 0 && (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Archive className="w-4 h-4 text-orange-400" /> Dead Stock (90+ Days)
+                </h2>
+                <div className="space-y-3">
+                  {deadStock.map((item) => (
+                    <Link 
+                      key={item.part.id} 
+                      to={`/parts/${item.part.id}`}
+                      className="flex items-center gap-4 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                        <Archive className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{item.part.name}</p>
+                        <p className="text-xs text-slate-500 font-mono">{item.part.sku}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-white">{item.quantity} units</p>
+                        <p className="text-xs text-orange-400">
+                          {item.daysSinceActivity ? `${item.daysSinceActivity}d idle` : 'Never moved'}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}

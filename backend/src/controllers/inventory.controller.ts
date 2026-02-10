@@ -124,3 +124,38 @@ export async function getEvents(req: AuthenticatedRequest, res: Response) {
     serverError(res);
   }
 }
+
+export async function getHistory(req: AuthenticatedRequest, res: Response) {
+  try {
+    const days = req.query.days ? parseInt(req.query.days as string) : 30;
+    const history = await inventoryService.getInventoryHistory(days);
+    success(res, history);
+  } catch (err) {
+    console.error('Get history error:', err);
+    serverError(res);
+  }
+}
+
+export async function getTopMovers(req: AuthenticatedRequest, res: Response) {
+  try {
+    const days = req.query.days ? parseInt(req.query.days as string) : 30;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const movers = await inventoryService.getTopMovers(days, limit);
+    success(res, movers);
+  } catch (err) {
+    console.error('Get top movers error:', err);
+    serverError(res);
+  }
+}
+
+export async function getDeadStock(req: AuthenticatedRequest, res: Response) {
+  try {
+    const days = req.query.days ? parseInt(req.query.days as string) : 90;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const deadStock = await inventoryService.getDeadStock(days, limit);
+    success(res, deadStock);
+  } catch (err) {
+    console.error('Get dead stock error:', err);
+    serverError(res);
+  }
+}

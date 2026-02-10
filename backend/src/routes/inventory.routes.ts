@@ -37,4 +37,13 @@ router.get('/on-hand', validateQuery(onHandQuerySchema), inventoryController.get
 // GET /api/inventory/events - Get event history (all authenticated users)
 router.get('/events', validateQuery(eventsQuerySchema), inventoryController.getEvents);
 
+// GET /api/inventory/history - Get inventory levels over time (for charts)
+router.get('/history', inventoryController.getHistory);
+
+// GET /api/inventory/top-movers - Get most active parts
+router.get('/top-movers', inventoryController.getTopMovers);
+
+// GET /api/inventory/dead-stock - Get parts with no recent activity
+router.get('/dead-stock', inventoryController.getDeadStock);
+
 export default router;

@@ -299,3 +299,149 @@ export async function getEvents(query: EventsQuery) {
     },
   };
 }
+
+/**
+ * Get inventory levels over time (for charts)
+ * Returns daily totals for the past N days
+ */
+export async function getInventoryHistory(days: number = 30) {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  startDate.setHours(0, 0, 0, 0);
+
+  // Get all events up to now
+  const allEvents = await prisma.inventoryEvent.findMany({
+    where: {
+      createdAt: { lte: endDate },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      qtyDelta: true,
+      createdAt: true,
+    },
+  });
+
+  // Build daily totals
+  const dailyData: { date: string; total: number }[] = [];
+  let runningTotal = 0;
+
+  // Calculate total before start date
+  for (const event of allEvents) {
+    if (event.createdAt < startDate) {
+      runningTotal += event.qtyDelta;
+    }
+  }
+
+  // Generate each day's data
+  for (let d = 0; d <= days; d++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(startDate.getDate() + d);
+    const nextDate = new Date(currentDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    // Sum events for this day
+    for (const event of allEvents) {
+      if (event.createdAt >= currentDate && event.createdAt < nextDate) {
+        runningTotal += event.qtyDelta;
+      }
+    }
+
+    dailyData.push({
+      date: currentDate.toISOString().split('T')[0],
+      total: runningTotal,
+    });
+  }
+
+  return dailyData;
+}
+
+/**
+ * Get top movers (most active parts by event count)
+ */
+export async function getTopMovers(days: number = 30, limit: number = 10) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const movers = await prisma.inventoryEvent.groupBy({
+    by: ['partId'],
+    where: {
+      createdAt: { gte: startDate },
+    },
+    _sum: { qtyDelta: true },
+    _count: { id: true },
+    orderBy: { _count: { id: 'desc' } },
+    take: limit,
+  });
+
+  // Enrich with part details
+  const results = await Promise.all(
+    movers.map(async (m) => {
+      const part = await prisma.part.findUnique({ where: { id: m.partId } });
+      return {
+        part,
+        eventCount: m._count.id,
+        netChange: m._sum.qtyDelta || 0,
+      };
+    })
+  );
+
+  return results.filter(r => r.part !== null);
+}
+
+/**
+ * Get dead stock (parts with no movement in N days)
+ */
+export async function getDeadStock(days: number = 90, limit: number = 20) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  // Get parts that have inventory but no recent events
+  const partsWithRecentEvents = await prisma.inventoryEvent.findMany({
+    where: {
+      createdAt: { gte: cutoffDate },
+    },
+    select: { partId: true },
+    distinct: ['partId'],
+  });
+
+  const activePartIds = partsWithRecentEvents.map(p => p.partId);
+
+  // Get all parts with inventory
+  const onHand = await prisma.inventoryEvent.groupBy({
+    by: ['partId'],
+    _sum: { qtyDelta: true },
+  });
+
+  const partsWithStock = onHand
+    .filter(o => (o._sum.qtyDelta || 0) > 0)
+    .map(o => o.partId);
+
+  // Find parts with stock but no recent activity
+  const deadPartIds = partsWithStock.filter(id => !activePartIds.includes(id));
+
+  // Get part details and last event date
+  const results = await Promise.all(
+    deadPartIds.slice(0, limit).map(async (partId) => {
+      const [part, lastEvent, quantity] = await Promise.all([
+        prisma.part.findUnique({ where: { id: partId } }),
+        prisma.inventoryEvent.findFirst({
+          where: { partId },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        }),
+        calculateOnHand(partId),
+      ]);
+      return {
+        part,
+        quantity,
+        lastActivity: lastEvent?.createdAt || null,
+        daysSinceActivity: lastEvent
+          ? Math.floor((Date.now() - lastEvent.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+          : null,
+      };
+    })
+  );
+
+  return results.filter(r => r.part !== null);
+}

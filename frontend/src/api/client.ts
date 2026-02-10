@@ -310,6 +310,27 @@ class ApiClient {
     return this.request<{ events: InventoryEvent[]; pagination: Pagination }>(`/inventory/events${params}`);
   }
 
+  async getInventoryHistory(days?: number) {
+    const params = days ? `?days=${days}` : '';
+    return this.request<{ date: string; total: number }[]>(`/inventory/history${params}`);
+  }
+
+  async getTopMovers(days?: number, limit?: number) {
+    const params = new URLSearchParams();
+    if (days) params.append('days', String(days));
+    if (limit) params.append('limit', String(limit));
+    const qs = params.toString();
+    return this.request<{ part: Part; eventCount: number; netChange: number }[]>(`/inventory/top-movers${qs ? '?' + qs : ''}`);
+  }
+
+  async getDeadStock(days?: number, limit?: number) {
+    const params = new URLSearchParams();
+    if (days) params.append('days', String(days));
+    if (limit) params.append('limit', String(limit));
+    const qs = params.toString();
+    return this.request<{ part: Part; quantity: number; lastActivity: string | null; daysSinceActivity: number | null }[]>(`/inventory/dead-stock${qs ? '?' + qs : ''}`);
+  }
+
   // Requests
   async getRequests(status?: string) {
     const params = status ? `?status=${status}` : '';

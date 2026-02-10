@@ -125,11 +125,12 @@
 
 ## 🔜 Phase 4 — Advanced Features
 
-### 4.1 Part Images
-- [ ] **Photo upload** — multiple images per part
-- [ ] **Image gallery** on part detail
-- [ ] **Thumbnail in list views**
-- [ ] **S3/Cloudflare R2 storage**
+### 4.1 Part Images ✅
+- [x] **Photo upload** — multiple images per part (base64, 5MB max)
+- [x] **Image gallery** on part detail (grid + lightbox)
+- [x] **Primary image** — star badge, auto-selection
+- [ ] **Thumbnail in list views** (deferred)
+- [ ] **S3/Cloudflare R2 storage** (deferred — using base64 for now)
 
 ### 4.2 Audit & Compliance
 - [x] **Full audit log** — who did what, when, filterable by entity/action

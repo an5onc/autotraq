@@ -97,17 +97,17 @@
 
 ## 🔜 Phase 3 — Enhanced UX
 
-### 3.1 Global Command Bar (⌘K)
-- [ ] Quick search across parts, vehicles, locations
-- [ ] Action shortcuts (receive stock, new part, etc.)
-- [ ] Recent items
-- [ ] Keyboard navigation
+### 3.1 Global Command Bar (⌘K) ✅
+- [x] Quick search across parts, vehicles (live API search)
+- [x] Action shortcuts (receive stock, new part, scan modes)
+- [x] Page navigation (dashboard, parts, vehicles, etc.)
+- [x] Keyboard navigation (↑↓ arrows, Enter to select, Esc to close)
 
-### 3.2 Low Stock System
-- [ ] **Threshold configuration** — per-part or per-location minimum
-- [ ] **Alert badge** in sidebar
-- [ ] **Email notifications** (optional)
-- [ ] **Suggested reorder quantities**
+### 3.2 Low Stock System ✅
+- [x] **Threshold configuration** — per-part minStock field (default 5)
+- [x] **Alert badge** in sidebar (with pulse animation)
+- [ ] **Email notifications** (optional) — deferred
+- [ ] **Suggested reorder quantities** — deferred
 
 ### 3.3 Bulk Operations
 - [ ] **Bulk receive** — scan multiple items, confirm all at once

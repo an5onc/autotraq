@@ -76,6 +76,7 @@ model Part {
   description String?        @db.Text
   condition   PartCondition  @default(UNKNOWN)
   minStock    Int            @default(5) @map("min_stock") // Low stock threshold
+  costCents   Int?           @map("cost_cents") // Cost per unit in cents (e.g., 1999 = $19.99)
   barcodeData String?        @db.Text @map("barcode_data")
   skuDecoded  String?        @db.Text @map("sku_decoded")
   createdAt   DateTime       @default(now())

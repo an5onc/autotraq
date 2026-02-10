@@ -14,12 +14,14 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  User
+  User,
+  DollarSign
 } from 'lucide-react';
 
 interface DashboardStats {
   totalParts: number;
   totalInventory: number;
+  totalValueCents: number;
   pendingRequests: number;
   lowStockCount: number;
   recentEvents: InventoryEvent[];
@@ -48,16 +50,27 @@ export function DashboardPage() {
         api.getRequests('PENDING'),
       ]);
 
-      // Calculate total inventory
-      const totalInventory = onHandRes.reduce((sum, item) => sum + item.quantity, 0);
+      // Build part lookup for cost
+      const partById = new Map(partsRes.parts.map(p => [p.id, p]));
 
-      // Find low stock parts (parts with quantity < their minStock threshold)
+      // Calculate total inventory and value
+      let totalInventory = 0;
+      let totalValueCents = 0;
       const partQuantities = new Map<number, number>();
+      
       onHandRes.forEach(item => {
+        totalInventory += item.quantity;
         const current = partQuantities.get(item.partId) || 0;
         partQuantities.set(item.partId, current + item.quantity);
+        
+        // Add to value if part has cost
+        const part = partById.get(item.partId);
+        if (part?.costCents) {
+          totalValueCents += item.quantity * part.costCents;
+        }
       });
 
+      // Find low stock parts (parts with quantity < their minStock threshold)
       const lowStockParts = partsRes.parts
         .filter(part => {
           const qty = partQuantities.get(part.id) || 0;
@@ -72,6 +85,7 @@ export function DashboardPage() {
       setStats({
         totalParts: partsRes.parts.length,
         totalInventory,
+        totalValueCents,
         pendingRequests: requestsRes.requests.length,
         lowStockCount: lowStockParts.length,
         recentEvents: eventsRes.events.slice(0, 8),
@@ -138,7 +152,7 @@ export function DashboardPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <KPICard
             title="Total Parts"
             value={stats?.totalParts || 0}
@@ -153,6 +167,15 @@ export function DashboardPage() {
             color="emerald"
             link="/inventory"
             suffix=" units"
+          />
+          <KPICard
+            title="Inventory Value"
+            value={stats?.totalValueCents ? stats.totalValueCents / 100 : 0}
+            icon={DollarSign}
+            color="purple"
+            link="/inventory"
+            prefix="$"
+            formatMoney
           />
           <KPICard
             title="Pending Requests"
@@ -280,16 +303,20 @@ function KPICard({
   icon: Icon, 
   color, 
   link, 
+  prefix = '',
   suffix = '',
-  alert = false 
+  alert = false,
+  formatMoney = false
 }: { 
   title: string;
   value: number;
   icon: React.ElementType;
   color: 'amber' | 'emerald' | 'blue' | 'red' | 'purple';
   link: string;
+  prefix?: string;
   suffix?: string;
   alert?: boolean;
+  formatMoney?: boolean;
 }) {
   const colorClasses = {
     amber: 'bg-amber-500/10 text-amber-400',
@@ -318,7 +345,7 @@ function KPICard({
         )}
       </div>
       <p className="text-2xl font-bold text-white">
-        {value.toLocaleString()}{suffix}
+        {prefix}{formatMoney ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value.toLocaleString()}{suffix}
       </p>
       <p className="text-xs text-slate-500 mt-1">{title}</p>
     </Link>

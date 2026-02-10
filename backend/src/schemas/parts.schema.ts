@@ -20,6 +20,7 @@ export const createPartSchema = z.object({
   description: z.string().optional(),
   condition: partConditionEnum.optional().default('UNKNOWN'),
   minStock: z.number().int().min(0).optional().default(5),
+  costCents: z.number().int().min(0).optional().nullable(),
 });
 
 export const addFitmentSchema = z.object({
@@ -47,6 +48,7 @@ export const updatePartSchema = z.object({
   description: z.string().optional(),
   condition: partConditionEnum.optional(),
   minStock: z.number().int().min(0).optional(),
+  costCents: z.number().int().min(0).optional().nullable(),
 });
 
 export type CreatePartInput = z.infer<typeof createPartSchema>;

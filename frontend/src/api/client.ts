@@ -155,10 +155,10 @@ class ApiClient {
     return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
   }
 
-  async createPart(sku: string, name: string, description?: string, condition?: PartCondition, minStock?: number) {
+  async createPart(sku: string, name: string, description?: string, condition?: PartCondition, minStock?: number, costCents?: number | null) {
     return this.request<Part>('/parts', {
       method: 'POST',
-      body: JSON.stringify({ sku, name, description, condition, minStock }),
+      body: JSON.stringify({ sku, name, description, condition, minStock, costCents }),
     });
   }
 
@@ -166,7 +166,7 @@ class ApiClient {
     return this.request<Part>(`/parts/${id}`);
   }
 
-  async updatePart(id: number, data: { sku?: string; name?: string; description?: string; condition?: PartCondition; minStock?: number }) {
+  async updatePart(id: number, data: { sku?: string; name?: string; description?: string; condition?: PartCondition; minStock?: number; costCents?: number | null }) {
     return this.request<Part>(`/parts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -400,6 +400,7 @@ export interface Part {
   description?: string;
   condition: PartCondition;
   minStock: number;
+  costCents?: number | null;
   barcodeData?: string;
   skuDecoded?: string;
   fitments?: PartFitment[];

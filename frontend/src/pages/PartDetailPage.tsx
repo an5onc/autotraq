@@ -260,7 +260,7 @@ export function PartDetailPage() {
         {/* Overview Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
             <EditableField field="name" value={part.name} label="Name" />
             <EditableField field="description" value={part.description || ''} label="Description" />
             {isManager ? (
@@ -317,6 +317,38 @@ export function PartDetailPage() {
                 />
               ) : (
                 <span className="text-white">{part.minStock}</span>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Unit Cost</label>
+              {isManager ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-400">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-28 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                    value={part.costCents ? (part.costCents / 100).toFixed(2) : ''}
+                    placeholder="0.00"
+                    onChange={async (e) => {
+                      const dollars = parseFloat(e.target.value);
+                      const cents = isNaN(dollars) ? null : Math.round(dollars * 100);
+                      setSaving(true);
+                      try {
+                        const updated = await api.updatePart(part.id, { costCents: cents });
+                        setPart(updated);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Failed to update');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    disabled={saving}
+                  />
+                </div>
+              ) : (
+                <span className="text-white">{part.costCents ? `$${(part.costCents / 100).toFixed(2)}` : '—'}</span>
               )}
             </div>
           </div>

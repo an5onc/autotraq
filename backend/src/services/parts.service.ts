@@ -31,6 +31,7 @@ export async function createPart(input: CreatePartInput) {
       description: input.description,
       condition: input.condition,
       minStock: input.minStock,
+      costCents: input.costCents,
       barcodeData,
       skuDecoded,
     },

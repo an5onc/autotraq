@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { api, Part, PartImage, InterchangeGroup, PartCondition, PART_CONDITIONS } from '../api/client';
+import { api, Part, PartImage, InterchangeGroup } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge, ConditionSelect } from '../components/ConditionBadge';

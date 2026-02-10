@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api, InventoryEvent, OnHand, Part } from '../api/client';
+import { api, InventoryEvent, Part } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { 
@@ -14,7 +14,6 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  User,
   DollarSign,
   Activity,
   Archive

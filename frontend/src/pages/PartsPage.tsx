@@ -555,7 +555,7 @@ export function PartsPage() {
       </div>
 
       {/* Modals */}
-      {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(true); setSkuMake(''); setSkuModel(''); setSkuYear(2024); setSkuSystem(''); setSkuComponent(''); setSkuPosition(''); setSkuPreview(''); setSkuBarcode(''); setPartForm({ sku: '', name: '', description: '', condition: 'UNKNOWN' }); }}>
+      {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(true); setSkuMake(''); setSkuModel(''); setSkuYear(2024); setSkuSystem(''); setSkuComponent(''); setSkuPosition(''); setSkuPreview(''); setSkuBarcode(''); setPartForm({ sku: '', name: '', description: '', condition: 'UNKNOWN', minStock: 5, costCents: null }); }}>
         <form onSubmit={handleCreatePart} className="space-y-4">
           {/* SKU Generation Toggle */}
           <div className="flex items-center justify-between mb-4">

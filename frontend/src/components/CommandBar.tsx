@@ -35,7 +35,7 @@ interface CommandBarProps {
 
 export function CommandBar({ isOpen, onClose }: CommandBarProps) {
   const navigate = useNavigate();
-  const { isManager, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchResults, setSearchResults] = useState<{ parts: Part[]; vehicles: Vehicle[] }>({ parts: [], vehicles: [] });
@@ -251,7 +251,7 @@ export function CommandBar({ isOpen, onClose }: CommandBarProps) {
               {searchResults.parts.length > 0 && (
                 <div className="mb-2">
                   <p className="px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Parts</p>
-                  {filteredItems.filter(i => i.type === 'part').map((item, index) => (
+                  {filteredItems.filter(i => i.type === 'part').map((item) => (
                     <CommandItem
                       key={item.id}
                       item={item}
@@ -265,7 +265,7 @@ export function CommandBar({ isOpen, onClose }: CommandBarProps) {
               {searchResults.vehicles.length > 0 && (
                 <div className="mb-2">
                   <p className="px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicles</p>
-                  {filteredItems.filter(i => i.type === 'vehicle').map((item, index) => (
+                  {filteredItems.filter(i => i.type === 'vehicle').map((item) => (
                     <CommandItem
                       key={item.id}
                       item={item}
@@ -279,7 +279,7 @@ export function CommandBar({ isOpen, onClose }: CommandBarProps) {
               {filteredItems.filter(i => i.type === 'page').length > 0 && (
                 <div className="mb-2">
                   <p className="px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pages</p>
-                  {filteredItems.filter(i => i.type === 'page').map((item, index) => (
+                  {filteredItems.filter(i => i.type === 'page').map((item) => (
                     <CommandItem
                       key={item.id}
                       item={item}
@@ -293,7 +293,7 @@ export function CommandBar({ isOpen, onClose }: CommandBarProps) {
               {filteredItems.filter(i => i.type === 'action').length > 0 && (
                 <div className="mb-2">
                   <p className="px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</p>
-                  {filteredItems.filter(i => i.type === 'action').map((item, index) => (
+                  {filteredItems.filter(i => i.type === 'action').map((item) => (
                     <CommandItem
                       key={item.id}
                       item={item}

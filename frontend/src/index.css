@@ -9,19 +9,59 @@
   --color-surface-lighter: #334155;
 }
 
-/* Scrollbar */
+/* Dark mode (default) */
+:root, .dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  color-scheme: dark;
+}
+
+/* Light mode */
+.light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  color-scheme: light;
+}
+
+/* Scrollbar - adapts to theme */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0f172a; }
-::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #64748b; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
 body {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s, color 0.2s;
 }
+
+/* Light mode overrides for common patterns */
+.light .bg-slate-950 { background-color: #f8fafc; }
+.light .bg-slate-900 { background-color: #ffffff; }
+.light .bg-slate-800 { background-color: #f1f5f9; }
+.light .bg-slate-800\/50 { background-color: rgba(241, 245, 249, 0.5); }
+.light .border-slate-800 { border-color: #e2e8f0; }
+.light .border-slate-700 { border-color: #cbd5e1; }
+.light .text-white { color: #0f172a; }
+.light .text-slate-400 { color: #64748b; }
+.light .text-slate-500 { color: #64748b; }
+.light .text-slate-300 { color: #475569; }
+.light .hover\:text-white:hover { color: #0f172a; }
+.light .hover\:bg-slate-800:hover { background-color: #e2e8f0; }
+.light .hover\:bg-slate-700:hover { background-color: #cbd5e1; }
 
 /* Prevent text clipping */
 h1, h2, h3, h4, h5, h6 {

@@ -1,11 +1,13 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine,
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
+  Sun, Moon, Monitor,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -87,9 +89,18 @@ const baseNavItems: NavItem[] = [
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout, isAdmin, isManager } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+
+  const cycleTheme = () => {
+    if (theme === 'dark') setTheme('light');
+    else if (theme === 'light') setTheme('system');
+    else setTheme('dark');
+  };
+
+  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
   const adminNavItem: NavItem = {
     to: '/admin',
     icon: Shield,
@@ -245,11 +256,11 @@ export function Layout({ children }: LayoutProps) {
         <div className={`${collapsed ? 'px-3 py-4' : 'px-5 py-5'} border-t border-slate-800`}>
           {!collapsed && (
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
+              <div className="w-10 h-10 rounded-full bg-slate-700 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                <p className="text-sm font-medium text-white dark:text-white truncate">{user?.name}</p>
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-slate-500" />
                   <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
@@ -257,14 +268,24 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className={`flex items-center gap-2 w-full ${collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-2.5'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
-            title={collapsed ? 'Sign Out' : undefined}
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            {!collapsed && 'Sign Out'}
-          </button>
+          <div className={`flex ${collapsed ? 'flex-col' : 'flex-row'} gap-2`}>
+            <button
+              onClick={cycleTheme}
+              className={`flex items-center gap-2 ${collapsed ? 'w-full px-3 py-3 justify-center' : 'flex-1 px-4 py-2.5'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
+              title={`Theme: ${theme}`}
+            >
+              <ThemeIcon className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="capitalize">{theme}</span>}
+            </button>
+            <button
+              onClick={handleLogout}
+              className={`flex items-center gap-2 ${collapsed ? 'w-full px-3 py-3 justify-center' : 'flex-1 px-4 py-2.5'} rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer`}
+              title={collapsed ? 'Sign Out' : undefined}
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!collapsed && 'Sign Out'}
+            </button>
+          </div>
         </div>
       </aside>
 

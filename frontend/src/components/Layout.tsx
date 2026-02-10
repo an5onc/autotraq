@@ -7,7 +7,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
-  Sun, Moon, Monitor,
+  Sun, Moon, Monitor, History,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -113,8 +113,14 @@ export function Layout({ children }: LayoutProps) {
     ],
   };
 
+  const auditNavItem: NavItem = {
+    to: '/audit',
+    icon: History,
+    label: 'Audit Log',
+  };
+
   const navItems: NavItem[] = (isAdmin || isManager)
-    ? [...baseNavItems, adminNavItem]
+    ? [...baseNavItems, auditNavItem, adminNavItem]
     : baseNavItems;
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {

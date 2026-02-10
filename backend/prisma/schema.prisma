@@ -298,3 +298,25 @@ model RequestItem {
 
   @@map("request_items")
 }
+
+// ============================================
+// Audit Log (System-wide activity tracking)
+// ============================================
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entityType  String   @map("entity_type") // Part, User, Request, etc.
+  entityId    Int?     @map("entity_id")
+  entityName  String?  @map("entity_name") // Human-readable identifier
+  userId      Int      @map("user_id")
+  userName    String   @map("user_name")
+  details     String?  @db.Text // JSON with old/new values or extra context
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

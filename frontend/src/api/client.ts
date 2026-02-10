@@ -331,6 +331,18 @@ class ApiClient {
     return this.request<{ part: Part; quantity: number; lastActivity: string | null; daysSinceActivity: number | null }[]>(`/inventory/dead-stock${qs ? '?' + qs : ''}`);
   }
 
+  // Audit
+  async getAuditLogs(query?: { entityType?: string; userId?: number; action?: string; page?: number; limit?: number }) {
+    const params = new URLSearchParams();
+    if (query?.entityType) params.append('entityType', query.entityType);
+    if (query?.userId) params.append('userId', String(query.userId));
+    if (query?.action) params.append('action', query.action);
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.limit) params.append('limit', String(query.limit));
+    const qs = params.toString();
+    return this.request<{ logs: AuditLog[]; pagination: Pagination }>(`/audit${qs ? '?' + qs : ''}`);
+  }
+
   // Requests
   async getRequests(status?: string) {
     const params = status ? `?status=${status}` : '';
@@ -564,6 +576,19 @@ export interface Pagination {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+export interface AuditLog {
+  id: number;
+  action: string;
+  entityType: string;
+  entityId?: number;
+  entityName?: string;
+  userId: number;
+  userName: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  createdAt: string;
 }
 
 export interface RoleRequest {

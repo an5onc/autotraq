@@ -5,7 +5,7 @@ import { api, Part, Location, OnHand, InventoryEvent } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { PartSearch } from '../components/PartSearch';
-import { Package, MapPin, ArrowDownToLine, PenLine, X, TrendingUp, TrendingDown, Box, Search } from 'lucide-react';
+import { Package, MapPin, ArrowDownToLine, PenLine, X, TrendingUp, TrendingDown, Box, Search, Layers, Trash2, Plus } from 'lucide-react';
 
 export function InventoryPage() {
   const { canFulfill, isManager } = useAuth();
@@ -20,10 +20,18 @@ export function InventoryPage() {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showBulkReceiveModal, setShowBulkReceiveModal] = useState(false);
 
   const [receiveForm, setReceiveForm] = useState({ partId: '', locationId: '', qty: 1, reason: '' });
   const [correctForm, setCorrectForm] = useState({ partId: '', locationId: '', qty: 0, reason: '' });
   const [locationName, setLocationName] = useState('');
+
+  // Bulk receive state
+  interface BulkItem { partId: number; partName: string; partSku: string; qty: number; }
+  const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
+  const [bulkLocationId, setBulkLocationId] = useState('');
+  const [bulkReason, setBulkReason] = useState('');
+  const [bulkPartSearch, setBulkPartSearch] = useState('');
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,6 +105,56 @@ export function InventoryPage() {
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to create location'); }
   };
 
+  const addBulkItem = (part: Part) => {
+    const existing = bulkItems.find(i => i.partId === part.id);
+    if (existing) {
+      setBulkItems(items => items.map(i => i.partId === part.id ? { ...i, qty: i.qty + 1 } : i));
+    } else {
+      setBulkItems(items => [...items, { partId: part.id, partName: part.name, partSku: part.sku, qty: 1 }]);
+    }
+    setBulkPartSearch('');
+  };
+
+  const updateBulkQty = (partId: number, qty: number) => {
+    if (qty <= 0) {
+      setBulkItems(items => items.filter(i => i.partId !== partId));
+    } else {
+      setBulkItems(items => items.map(i => i.partId === partId ? { ...i, qty } : i));
+    }
+  };
+
+  const removeBulkItem = (partId: number) => {
+    setBulkItems(items => items.filter(i => i.partId !== partId));
+  };
+
+  const handleBulkReceive = async () => {
+    if (!bulkLocationId || bulkItems.length === 0) return;
+    const locationId = parseInt(bulkLocationId);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of bulkItems) {
+      try {
+        await api.receiveStock(item.partId, locationId, item.qty, bulkReason || undefined);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    if (failCount === 0) {
+      toast.success(`Received ${bulkItems.length} items (${bulkItems.reduce((s, i) => s + i.qty, 0)} units total)`);
+    } else {
+      toast.error(`${successCount} succeeded, ${failCount} failed`);
+    }
+
+    setShowBulkReceiveModal(false);
+    setBulkItems([]);
+    setBulkLocationId('');
+    setBulkReason('');
+    loadData();
+  };
+
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();
 
   const totalQty = onHand.reduce((sum, i) => sum + i.quantity, 0);
@@ -149,7 +207,10 @@ export function InventoryPage() {
               </>
             )}
             {canFulfill && (
-              <button onClick={() => setShowReceiveModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer"><ArrowDownToLine className="w-4 h-4" /> Receive Stock</button>
+              <>
+                <button onClick={() => setShowBulkReceiveModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer"><Layers className="w-4 h-4" /> Bulk Receive</button>
+                <button onClick={() => setShowReceiveModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer"><ArrowDownToLine className="w-4 h-4" /> Receive Stock</button>
+              </>
             )}
           </div>
         </div>
@@ -317,6 +378,121 @@ export function InventoryPage() {
           <ModalFooter onCancel={() => setShowLocationModal(false)} label="Create Location" />
         </form>
       </Modal>}
+
+      {showBulkReceiveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowBulkReceiveModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl mx-4 shadow-2xl animate-fade-in max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800 shrink-0">
+              <h3 className="text-lg font-semibold text-white">Bulk Receive Stock</h3>
+              <button onClick={() => setShowBulkReceiveModal(false)} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="px-7 py-6 space-y-4 overflow-y-auto flex-1">
+              {/* Location select */}
+              <Field label="Target Location">
+                <select className={inputCls} value={bulkLocationId} onChange={(e) => setBulkLocationId(e.target.value)} required>
+                  <option value="">Select location...</option>
+                  {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </Field>
+
+              {/* Part search to add */}
+              <Field label="Add Parts">
+                <div className="relative">
+                  <input
+                    type="text"
+                    className={inputCls}
+                    placeholder="Search by SKU or name..."
+                    value={bulkPartSearch}
+                    onChange={(e) => setBulkPartSearch(e.target.value)}
+                  />
+                  {bulkPartSearch && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
+                      {parts
+                        .filter(p => 
+                          p.sku.toLowerCase().includes(bulkPartSearch.toLowerCase()) ||
+                          p.name.toLowerCase().includes(bulkPartSearch.toLowerCase())
+                        )
+                        .slice(0, 8)
+                        .map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => addBulkItem(p)}
+                            className="w-full px-4 py-2 text-left hover:bg-slate-700 transition-colors flex items-center gap-3"
+                          >
+                            <Plus className="w-4 h-4 text-amber-400" />
+                            <span className="font-mono text-xs text-amber-400">{p.sku}</span>
+                            <span className="text-sm text-white truncate">{p.name}</span>
+                          </button>
+                        ))
+                      }
+                      {parts.filter(p => 
+                        p.sku.toLowerCase().includes(bulkPartSearch.toLowerCase()) ||
+                        p.name.toLowerCase().includes(bulkPartSearch.toLowerCase())
+                      ).length === 0 && (
+                        <p className="px-4 py-3 text-sm text-slate-500">No parts found</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Field>
+
+              {/* Items list */}
+              {bulkItems.length > 0 && (
+                <div className="border border-slate-700 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Items to Receive ({bulkItems.length})
+                  </div>
+                  <div className="divide-y divide-slate-800">
+                    {bulkItems.map(item => (
+                      <div key={item.partId} className="flex items-center gap-4 px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium truncate">{item.partName}</p>
+                          <p className="text-xs text-slate-500 font-mono">{item.partSku}</p>
+                        </div>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-20 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm text-center focus:outline-none focus:border-amber-500"
+                          value={item.qty}
+                          onChange={(e) => updateBulkQty(item.partId, parseInt(e.target.value) || 0)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeBulkItem(item.partId)}
+                          className="p-2 text-slate-500 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-3 bg-slate-800/50 text-sm text-right">
+                    <span className="text-slate-400">Total:</span>
+                    <span className="ml-2 text-white font-semibold">{bulkItems.reduce((s, i) => s + i.qty, 0)} units</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason */}
+              <Field label="Reason (optional)">
+                <input type="text" className={inputCls} value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} placeholder="PO #12345, Shipment received, etc." />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-3 px-7 py-5 border-t border-slate-800 shrink-0">
+              <button type="button" onClick={() => setShowBulkReceiveModal(false)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white whitespace-nowrap transition-colors cursor-pointer">Cancel</button>
+              <button
+                type="button"
+                onClick={handleBulkReceive}
+                disabled={!bulkLocationId || bulkItems.length === 0}
+                className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer"
+              >
+                Receive {bulkItems.length} Items
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -129,19 +129,21 @@
 - [x] **Photo upload** — multiple images per part (base64, 5MB max)
 - [x] **Image gallery** on part detail (grid + lightbox)
 - [x] **Primary image** — star badge, auto-selection
-- [ ] **Thumbnail in list views** (deferred)
+- [x] **Thumbnail in list views** — shows primary image in parts table
 - [ ] **S3/Cloudflare R2 storage** (deferred — using base64 for now)
 
-### 4.2 Audit & Compliance
+### 4.2 Audit & Compliance ✅
 - [x] **Full audit log** — who did what, when, filterable by entity/action
 - [ ] **Data export** for compliance (deferred)
 - [ ] **Soft delete** — archive instead of hard delete (deferred)
 - [ ] **Change history** — per-record versioning (deferred)
 
-### 4.3 Notifications
-- [ ] **In-app notifications** — bell icon, unread count
-- [ ] **Email alerts** — low stock, request approved
-- [ ] **Webhook support** — external integrations
+### 4.3 Notifications ✅
+- [x] **In-app notifications** — bell icon, unread count, dropdown list
+- [x] **Notification types** — INFO, SUCCESS, WARNING, ERROR, LOW_STOCK, REQUEST_*, ROLE_*
+- [x] **Mark as read** — single or all, auto-refresh every 30s
+- [ ] **Email alerts** — low stock, request approved (deferred)
+- [ ] **Webhook support** — external integrations (deferred)
 
 ### 4.4 Advanced Inventory
 - [ ] **Lot/serial tracking** — individual unit tracking

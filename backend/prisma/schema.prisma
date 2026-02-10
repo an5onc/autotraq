@@ -70,14 +70,15 @@ enum Role {
 // ============================================
 
 model Part {
-  id          Int      @id @default(autoincrement())
-  sku         String   @unique
+  id          Int            @id @default(autoincrement())
+  sku         String         @unique
   name        String
-  description String?  @db.Text
-  barcodeData String?  @db.Text @map("barcode_data")
-  skuDecoded  String?  @db.Text @map("sku_decoded")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  description String?        @db.Text
+  condition   PartCondition  @default(UNKNOWN)
+  barcodeData String?        @db.Text @map("barcode_data")
+  skuDecoded  String?        @db.Text @map("sku_decoded")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   fitments           PartFitment[]
   interchangeMembers InterchangeGroupMember[]
@@ -85,6 +86,17 @@ model Part {
   requestItems       RequestItem[]
 
   @@map("parts")
+}
+
+enum PartCondition {
+  NEW         // Brand new, never installed
+  EXCELLENT   // Used, like new condition
+  GOOD        // Used, normal wear, fully functional
+  FAIR        // Used, noticeable wear but functional
+  POOR        // Heavy wear, may need repair
+  CORE        // For rebuild/exchange programs
+  SALVAGE     // Damaged, for parts only
+  UNKNOWN     // Condition not assessed
 }
 
 // ============================================

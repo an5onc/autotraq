@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, Part, InterchangeGroup } from '../api/client';
+import { api, Part, InterchangeGroup, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { ConditionBadge, ConditionSelect } from '../components/ConditionBadge';
 import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle } from 'lucide-react';
 
 export function PartDetailPage() {
@@ -259,7 +260,7 @@ export function PartDetailPage() {
         {/* Overview Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <EditableField field="name" value={part.name} label="Name" />
             <EditableField field="description" value={part.description || ''} label="Description" />
             {isManager ? (
@@ -270,6 +271,28 @@ export function PartDetailPage() {
                 <span className="text-white font-mono">{part.sku}</span>
               </div>
             )}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Condition</label>
+              {isManager ? (
+                <ConditionSelect 
+                  value={part.condition || 'UNKNOWN'} 
+                  onChange={async (value) => {
+                    setSaving(true);
+                    try {
+                      const updated = await api.updatePart(part.id, { condition: value });
+                      setPart(updated);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to update');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }} 
+                  disabled={saving}
+                />
+              ) : (
+                <ConditionBadge condition={part.condition || 'UNKNOWN'} size="md" />
+              )}
+            </div>
           </div>
         </div>
 

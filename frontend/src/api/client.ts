@@ -166,7 +166,7 @@ class ApiClient {
     return this.request<Part>(`/parts/${id}`);
   }
 
-  async updatePart(id: number, data: { sku?: string; name?: string; description?: string }) {
+  async updatePart(id: number, data: { sku?: string; name?: string; description?: string; condition?: PartCondition }) {
     return this.request<Part>(`/parts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -380,11 +380,25 @@ export interface User {
   role: 'admin' | 'manager' | 'fulfillment' | 'viewer';
 }
 
+export type PartCondition = 'NEW' | 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'CORE' | 'SALVAGE' | 'UNKNOWN';
+
+export const PART_CONDITIONS: { value: PartCondition; label: string; color: string }[] = [
+  { value: 'NEW', label: 'New', color: 'emerald' },
+  { value: 'EXCELLENT', label: 'Excellent', color: 'green' },
+  { value: 'GOOD', label: 'Good', color: 'blue' },
+  { value: 'FAIR', label: 'Fair', color: 'amber' },
+  { value: 'POOR', label: 'Poor', color: 'orange' },
+  { value: 'CORE', label: 'Core', color: 'purple' },
+  { value: 'SALVAGE', label: 'Salvage', color: 'red' },
+  { value: 'UNKNOWN', label: 'Unknown', color: 'slate' },
+];
+
 export interface Part {
   id: number;
   sku: string;
   name: string;
   description?: string;
+  condition: PartCondition;
   barcodeData?: string;
   skuDecoded?: string;
   fitments?: PartFitment[];

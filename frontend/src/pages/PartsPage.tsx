@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode } from '../api/client';
+import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { ConditionBadge } from '../components/ConditionBadge';
 import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function PartsPage() {
@@ -26,7 +27,7 @@ export function PartsPage() {
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
 
-  const [partForm, setPartForm] = useState({ sku: '', name: '', description: '' });
+  const [partForm, setPartForm] = useState({ sku: '', name: '', description: '', condition: 'UNKNOWN' as PartCondition });
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
@@ -282,6 +283,7 @@ export function PartsPage() {
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Condition</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
                       <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
@@ -307,6 +309,9 @@ export function PartsPage() {
                           )}
                         </td>
                         <td className="px-8 py-5 text-sm text-white font-medium">{part.name}</td>
+                        <td className="px-8 py-5">
+                          <ConditionBadge condition={part.condition || 'UNKNOWN'} />
+                        </td>
                         <td className="px-8 py-5 text-sm text-slate-400">{part.description || '—'}</td>
                         <td className="px-8 py-5">
                           {part.fitments && part.fitments.length > 0 ? (
@@ -366,7 +371,7 @@ export function PartsPage() {
       </div>
 
       {/* Modals */}
-      {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(true); setSkuMake(''); setSkuModel(''); setSkuYear(2024); setSkuSystem(''); setSkuComponent(''); setSkuPosition(''); setSkuPreview(''); setSkuBarcode(''); setPartForm({ sku: '', name: '', description: '' }); }}>
+      {showPartModal && <Modal title="Create New Part" onClose={() => { setShowPartModal(false); setUseSkuGen(true); setSkuMake(''); setSkuModel(''); setSkuYear(2024); setSkuSystem(''); setSkuComponent(''); setSkuPosition(''); setSkuPreview(''); setSkuBarcode(''); setPartForm({ sku: '', name: '', description: '', condition: 'UNKNOWN' }); }}>
         <form onSubmit={handleCreatePart} className="space-y-4">
           {/* SKU Generation Toggle */}
           <div className="flex items-center justify-between mb-4">
@@ -433,6 +438,11 @@ export function PartsPage() {
 
           <Field label="Name"><input type="text" className={inputCls} value={partForm.name} onChange={(e) => setPartForm({ ...partForm, name: e.target.value })} required placeholder="Brake Pad Set" /></Field>
           <Field label="Description (optional)"><input type="text" className={inputCls} value={partForm.description} onChange={(e) => setPartForm({ ...partForm, description: e.target.value })} placeholder="Front brake pads for sedans" /></Field>
+          <Field label="Condition">
+            <select className={selectCls} value={partForm.condition} onChange={(e) => setPartForm({ ...partForm, condition: e.target.value as PartCondition })}>
+              {PART_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </Field>
           <div className="border-t border-slate-800 pt-4">
             <p className="text-xs text-slate-500 mb-3">Optionally link a vehicle fitment:</p>
             <Field label="Year">

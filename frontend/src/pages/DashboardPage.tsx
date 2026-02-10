@@ -20,6 +20,7 @@ import {
   Archive
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { SkeletonKPICards, SkeletonChart, SkeletonList } from '../components/Skeleton';
 
 interface DashboardStats {
   totalParts: number;
@@ -161,8 +162,27 @@ export function DashboardPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="animate-fade-in">
+          <div className="mb-8">
+            <div className="h-9 w-40 bg-slate-800 rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-slate-800/50 rounded animate-pulse" />
+          </div>
+          <div className="mb-8">
+            <SkeletonKPICards count={5} />
+          </div>
+          <div className="mb-8">
+            <SkeletonChart />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="h-4 w-32 bg-slate-800 rounded animate-pulse mb-5" />
+              <SkeletonList items={5} />
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="h-4 w-32 bg-slate-800 rounded animate-pulse mb-5" />
+              <SkeletonList items={5} />
+            </div>
+          </div>
         </div>
       </Layout>
     );

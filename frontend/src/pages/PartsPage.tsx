@@ -5,6 +5,7 @@ import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartC
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
+import { SkeletonTable } from '../components/Skeleton';
 import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 
 export function PartsPage() {
@@ -420,10 +421,11 @@ export function PartsPage() {
         </div>
 
         {/* Table */}
+        {loading ? (
+          <SkeletonTable rows={8} cols={6} />
+        ) : (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-slate-500">Loading...</div>
-          ) : parts.length === 0 ? (
+          {parts.length === 0 ? (
             <div className="p-12 text-center">
               <Wrench className="w-12 h-12 text-slate-700 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-slate-400">No parts found</h3>
@@ -523,6 +525,7 @@ export function PartsPage() {
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Modals */}

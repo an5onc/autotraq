@@ -5,7 +5,7 @@ import {
   Wrench, Package, ClipboardList, Car, BarChart3, LogOut, Shield, ScanLine,
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
-  Users, UserPlus, ShieldAlert, QrCode,
+  Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -27,6 +27,11 @@ interface NavItem {
 
 // Admin nav is added dynamically based on role
 const baseNavItems: NavItem[] = [
+  {
+    to: '/dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+  },
   {
     to: '/parts',
     icon: Wrench,
@@ -142,6 +147,26 @@ export function Layout({ children }: LayoutProps) {
             )}
           </div>
         </div>
+
+        {/* Search / Command Bar Trigger */}
+        {!collapsed && (
+          <div className="px-5 py-3 border-b border-slate-800/50">
+            <button
+              onClick={() => {
+                // Trigger cmd+k via custom event
+                const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true });
+                window.dispatchEvent(event);
+              }}
+              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 transition-colors cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+              <span className="flex-1 text-left">Search...</span>
+              <kbd className="flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-900 rounded border border-slate-700 text-[10px]">
+                <Command className="w-2.5 h-2.5" />K
+              </kbd>
+            </button>
+          </div>
+        )}
 
         {/* Collapse toggle */}
         <div className={`${collapsed ? 'px-3' : 'px-5'} py-3 border-b border-slate-800/50`}>

@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { CommandBar, useCommandBar } from './components/CommandBar';
 import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { PartsPage } from './pages/PartsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { RequestsPage } from './pages/RequestsPage';
@@ -12,6 +14,7 @@ import { AdminPage } from './pages/AdminPage';
 
 function App() {
   const { user, loading } = useAuth();
+  const commandBar = useCommandBar();
 
   if (loading) {
     return (
@@ -25,18 +28,24 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/parts" replace /> : <LoginPage />} />
-      <Route path="/parts" element={<ProtectedRoute><PartsPage /></ProtectedRoute>} />
-      <Route path="/parts/:id" element={<ProtectedRoute><PartDetailPage /></ProtectedRoute>} />
-      <Route path="/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-      <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
-      <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
-      <Route path="/" element={<Navigate to="/parts" replace />} />
-      <Route path="*" element={<Navigate to="/parts" replace />} />
-    </Routes>
+    <>
+      {/* Global Command Bar (⌘K) */}
+      {user && <CommandBar isOpen={commandBar.isOpen} onClose={commandBar.close} />}
+      
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/parts" element={<ProtectedRoute><PartsPage /></ProtectedRoute>} />
+        <Route path="/parts/:id" element={<ProtectedRoute><PartDetailPage /></ProtectedRoute>} />
+        <Route path="/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+        <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
+        <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </>
   );
 }
 

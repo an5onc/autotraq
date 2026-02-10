@@ -1,0 +1,15 @@
+[variables]
+# Dummy DATABASE_URL for Prisma generate during build (actual URL used at runtime)
+DATABASE_URL = "mysql://user:pass@localhost:3306/db"
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npx prisma generate", "npm run build"]
+
+[start]
+cmd = "npx prisma db push --accept-data-loss && npm run start"

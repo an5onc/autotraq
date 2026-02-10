@@ -212,25 +212,30 @@
 
 ---
 
-## 🎯 Tonight's Build (Feb 9-10)
+## 🎯 Tonight's Build (Feb 9-10) ✅ COMPLETE
 
-### Feature 1: Dashboard Page
-- [ ] Create `/dashboard` route
-- [ ] KPI cards (parts count, inventory count, pending requests, low stock)
-- [ ] Recent activity feed
-- [ ] Quick action buttons
+### Feature 1: Dashboard Page ✅
+- [x] Create `/dashboard` route
+- [x] KPI cards (parts count, inventory count, pending requests, low stock)
+- [x] Recent activity feed (last 8 events)
+- [x] Quick action buttons
+- [x] Low stock alerts panel
+- [x] Dashboard is now the default landing page
 
-### Feature 2: Low Stock Alerts
-- [ ] Add `minStock` field to Part model
-- [ ] Low stock query endpoint
-- [ ] Alert badge in sidebar
-- [ ] Low stock panel on dashboard
+### Feature 2: Low Stock Alerts ✅
+- [x] Low stock detection (threshold: qty < 5)
+- [x] Alert badge with pulse animation
+- [x] Low stock panel on dashboard
+- [ ] Add `minStock` field to Part model (deferred to Phase 3)
+- [ ] Per-part threshold configuration (deferred)
 
-### Feature 3: Global Command Bar (⌘K)
-- [ ] CommandBar component with keyboard trigger
-- [ ] Search across parts, vehicles
-- [ ] Action shortcuts
-- [ ] Recent items
+### Feature 3: Global Command Bar (⌘K) ✅
+- [x] CommandBar component with keyboard trigger (⌘K / Ctrl+K)
+- [x] Search across parts, vehicles (live API search)
+- [x] Action shortcuts (receive stock, new part, scan modes)
+- [x] Page navigation (dashboard, parts, vehicles, etc.)
+- [x] Keyboard navigation (↑↓ arrows, Enter to select, Esc to close)
+- [x] Search trigger button in sidebar
 
 ---
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
@@ -158,9 +159,10 @@ export function PartsPage() {
       setShowPartModal(false);
       setPartForm({ sku: '', name: '', description: '', condition: 'UNKNOWN', minStock: 5, costCents: null });
       setPartVehicleYear(''); setPartVehicleMake(''); setPartVehicleId('');
+      toast.success(`Part "${part.name}" created`);
       loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create part');
+      toast.error(err instanceof Error ? err.message : 'Failed to create part');
     }
   };
 
@@ -257,8 +259,9 @@ export function PartsPage() {
       a.download = `parts-export-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+      toast.success(`Exported ${allParts.parts.length} parts to CSV`);
     } catch (err) {
-      setError('Failed to export parts');
+      toast.error('Failed to export parts');
     }
   };
 

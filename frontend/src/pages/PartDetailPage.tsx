@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api, Part, InterchangeGroup, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
@@ -87,8 +88,9 @@ export function PartDetailPage() {
       const updated = await api.updatePart(part.id, { [editingField]: editValue });
       setPart(updated);
       setEditingField(null);
+      toast.success('Saved');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -105,7 +107,9 @@ export function PartDetailPage() {
     try {
       const updated = await api.generatePartBarcode(part.id);
       setPart(updated);
+      toast.success('Barcode generated');
     } catch (err) {
+      toast.error('Failed to generate barcode');
       setError(err instanceof Error ? err.message : 'Failed to generate barcode');
     } finally {
       setSaving(false);
@@ -119,9 +123,10 @@ export function PartDetailPage() {
       await api.addFitment(part.id, fitVehicleId);
       setShowFitmentForm(false);
       setFitYear(''); setFitMake(''); setFitVehicleId('');
+      toast.success('Fitment added');
       loadPart();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add fitment');
+      toast.error(err instanceof Error ? err.message : 'Failed to add fitment');
     }
   };
 
@@ -129,9 +134,10 @@ export function PartDetailPage() {
     if (!part) return;
     try {
       await api.removeFitment(part.id, vehicleId);
+      toast.success('Fitment removed');
       loadPart();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove fitment');
+      toast.error(err instanceof Error ? err.message : 'Failed to remove fitment');
     }
   };
 
@@ -142,9 +148,10 @@ export function PartDetailPage() {
       await api.addGroupMember(selectedGroupId, part.id);
       setShowGroupForm(false);
       setSelectedGroupId('');
+      toast.success('Added to group');
       loadPart();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add to group');
+      toast.error(err instanceof Error ? err.message : 'Failed to add to group');
     }
   };
 
@@ -152,6 +159,7 @@ export function PartDetailPage() {
     if (!part) return;
     try {
       await api.removeGroupMember(groupId, part.id);
+      toast.success('Removed from group');
       loadPart();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove from group');

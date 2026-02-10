@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api, Part, Location, OnHand, InventoryEvent } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
@@ -69,8 +70,9 @@ export function InventoryPage() {
       await api.receiveStock(parseInt(receiveForm.partId), parseInt(receiveForm.locationId), receiveForm.qty, receiveForm.reason || undefined);
       setShowReceiveModal(false);
       setReceiveForm({ partId: '', locationId: '', qty: 1, reason: '' });
+      toast.success(`Received ${receiveForm.qty} units`);
       loadData();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to receive stock'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to receive stock'); }
   };
 
   const handleCorrect = async (e: React.FormEvent) => {
@@ -79,8 +81,9 @@ export function InventoryPage() {
       await api.correctStock(parseInt(correctForm.partId), parseInt(correctForm.locationId), correctForm.qty, correctForm.reason);
       setShowCorrectModal(false);
       setCorrectForm({ partId: '', locationId: '', qty: 0, reason: '' });
+      toast.success('Stock corrected');
       loadData();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to correct stock'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to correct stock'); }
   };
 
   const handleCreateLocation = async (e: React.FormEvent) => {
@@ -89,8 +92,9 @@ export function InventoryPage() {
       await api.createLocation(locationName);
       setShowLocationModal(false);
       setLocationName('');
+      toast.success(`Location "${locationName}" created`);
       loadData();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to create location'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to create location'); }
   };
 
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();

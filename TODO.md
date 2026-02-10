@@ -117,9 +117,9 @@
 ### 3.4 UI Enhancements
 - [x] **Toast notifications** — react-hot-toast, success/error feedback
 - [x] **Theme toggle** — dark/light/system mode with localStorage persistence
-- [ ] **Mobile responsive** — better touch targets, swipe actions
-- [ ] **Keyboard shortcuts** — documented, customizable
-- [ ] **Loading skeletons** — better perceived performance
+- [x] **Loading skeletons** — Dashboard + Parts page skeleton layouts
+- [ ] **Mobile responsive** — better touch targets (deferred)
+- [ ] **Keyboard shortcuts** — documented (deferred)
 
 ---
 

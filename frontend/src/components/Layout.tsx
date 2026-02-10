@@ -9,6 +9,7 @@ import {
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
   Sun, Moon, Monitor, History,
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -272,6 +273,12 @@ export function Layout({ children }: LayoutProps) {
                   <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
                 </div>
               </div>
+              <NotificationBell />
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex justify-center mb-3">
+              <NotificationBell />
             </div>
           )}
           <div className={`flex ${collapsed ? 'flex-col' : 'flex-row'} gap-2`}>

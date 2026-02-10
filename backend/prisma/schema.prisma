@@ -319,6 +319,41 @@ model RequestItem {
 // Audit Log (System-wide activity tracking)
 // ============================================
 
+// ============================================
+// Notifications
+// ============================================
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  link      String?          // Optional link to navigate to
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  LOW_STOCK
+  REQUEST_APPROVED
+  REQUEST_DENIED
+  ROLE_APPROVED
+  ROLE_DENIED
+}
+
+// ============================================
+// Audit & Logging
+// ============================================
+
 model AuditLog {
   id          Int      @id @default(autoincrement())
   action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.

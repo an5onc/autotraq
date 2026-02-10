@@ -456,6 +456,41 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async getPrimaryImages(partIds: number[]) {
+    return this.request<{ id: number; partId: number; filename: string; mimeType: string }[]>('/images/primary-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ partIds }),
+    });
+  }
+
+  // ============================================
+  // Notifications
+  // ============================================
+
+  async getNotifications(limit?: number, unreadOnly?: boolean) {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+    if (unreadOnly) params.set('unread', 'true');
+    const query = params.toString() ? `?${params}` : '';
+    return this.request<Notification[]>(`/notifications${query}`);
+  }
+
+  async getNotificationCount() {
+    return this.request<{ count: number }>('/notifications/count');
+  }
+
+  async markNotificationRead(id: number) {
+    return this.request<{ read: boolean }>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request<{ marked: number }>('/notifications/read-all', {
+      method: 'POST',
+    });
+  }
 }
 
 // Types
@@ -674,6 +709,19 @@ export interface UserWithCreator extends User {
   loginBarcode?: string;
   createdAt: string;
   createdBy?: { id: number; name: string };
+}
+
+export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'LOW_STOCK' | 'REQUEST_APPROVED' | 'REQUEST_DENIED' | 'ROLE_APPROVED' | 'ROLE_DENIED';
+
+export interface Notification {
+  id: number;
+  userId: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export const api = new ApiClient();

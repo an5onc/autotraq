@@ -148,6 +148,26 @@ export async function setPrimaryImage(req: AuthenticatedRequest, res: Response) 
 }
 
 /**
+ * POST /api/images/primary-bulk - Get primary images for multiple parts
+ */
+export async function getPrimaryImages(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { partIds } = req.body;
+    
+    if (!Array.isArray(partIds) || partIds.length === 0) {
+      success(res, []);
+      return;
+    }
+
+    const images = await imagesService.getPrimaryImages(partIds.map((id: number) => parseInt(String(id))));
+    success(res, images);
+  } catch (err) {
+    console.error('Get primary images error:', err);
+    serverError(res);
+  }
+}
+
+/**
  * DELETE /api/images/:imageId - Delete image
  */
 export async function deleteImage(req: AuthenticatedRequest, res: Response) {

@@ -14,6 +14,9 @@ partImagesRouter.get('/', authenticate, imagesController.getPartImages);
 partImagesRouter.post('/', authenticate, requireManager, imagesController.uploadImage);
 
 // Image-scoped routes (under /api/images)
+// POST /api/images/primary-bulk - Get primary images for multiple parts (for thumbnails)
+router.post('/primary-bulk', authenticate, imagesController.getPrimaryImages);
+
 // GET /api/images/:imageId - Get image metadata + data
 router.get('/:imageId', authenticate, imagesController.getImage);
 

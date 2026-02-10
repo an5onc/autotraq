@@ -114,6 +114,28 @@ export async function setPrimaryImage(imageId: number) {
 }
 
 /**
+ * Get primary images for multiple parts (for list view thumbnails)
+ */
+export async function getPrimaryImages(partIds: number[]) {
+  if (partIds.length === 0) return [];
+  
+  const images = await prisma.partImage.findMany({
+    where: {
+      partId: { in: partIds },
+      isPrimary: true,
+    },
+    select: {
+      id: true,
+      partId: true,
+      filename: true,
+      mimeType: true,
+    },
+  });
+  
+  return images;
+}
+
+/**
  * Delete an image
  */
 export async function deleteImage(imageId: number) {

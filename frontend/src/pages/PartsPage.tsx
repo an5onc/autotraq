@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
 import { SkeletonTable } from '../components/Skeleton';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, ImageIcon } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -15,6 +15,7 @@ export function PartsPage() {
   const { isManager } = useAuth();
   const [parts, setParts] = useState<Part[]>([]);
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
+  const [thumbnails, setThumbnails] = useState<Map<number, number>>(new Map()); // partId → imageId
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -150,6 +151,19 @@ export function PartsPage() {
       setTotalPages(partsData.pagination.totalPages);
       setTotal(partsData.pagination.total);
       setGroups(groupsData);
+      
+      // Load thumbnails for these parts
+      if (partsData.parts.length > 0) {
+        try {
+          const partIds = partsData.parts.map(p => p.id);
+          const images = await api.getPrimaryImages(partIds);
+          const thumbMap = new Map<number, number>();
+          images.forEach(img => thumbMap.set(img.partId, img.id));
+          setThumbnails(thumbMap);
+        } catch {
+          // Thumbnails are optional, don't fail the page
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -437,23 +451,36 @@ export function PartsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Condition</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
-                      <th className="px-8 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
-                      {isManager && <th className="px-8 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+                      <th className="px-4 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Condition</th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
+                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
+                      {isManager && <th className="px-6 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {parts.map((part) => (
                       <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
-                        <td className="px-8 py-5">
-                          <span className="inline-flex px-4 py-2 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
+                        <td className="px-4 py-3">
+                          {thumbnails.has(part.id) ? (
+                            <img
+                              src={api.getImageUrl(thumbnails.get(part.id)!)}
+                              alt=""
+                              className="w-12 h-12 object-cover rounded-lg border border-slate-700"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center">
+                              <ImageIcon className="w-5 h-5 text-slate-600" />
+                            </div>
+                          )}
                         </td>
-                        <td className="px-8 py-5">
+                        <td className="px-6 py-4">
+                          <span className="inline-flex px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
+                        </td>
+                        <td className="px-6 py-4">
                           {part.barcodeData ? (
                             <img
                               src={`data:image/png;base64,${part.barcodeData}`}
@@ -465,12 +492,11 @@ export function PartsPage() {
                             <span className="text-xs text-slate-600">—</span>
                           )}
                         </td>
-                        <td className="px-8 py-5 text-sm text-white font-medium">{part.name}</td>
-                        <td className="px-8 py-5">
+                        <td className="px-6 py-4 text-sm text-white font-medium">{part.name}</td>
+                        <td className="px-6 py-4">
                           <ConditionBadge condition={part.condition || 'UNKNOWN'} />
                         </td>
-                        <td className="px-8 py-5 text-sm text-slate-400">{part.description || '—'}</td>
-                        <td className="px-8 py-5">
+                        <td className="px-6 py-4">
                           {part.fitments && part.fitments.length > 0 ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
                               <Car className="w-3 h-3" /> {part.fitments.length}
@@ -479,16 +505,16 @@ export function PartsPage() {
                             <span className="text-xs text-slate-600">None</span>
                           )}
                         </td>
-                        <td className="px-8 py-5 text-sm text-slate-400">
+                        <td className="px-6 py-4 text-sm text-slate-400">
                           {part.interchangeMembers && part.interchangeMembers.length > 0
                             ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
                             : <span className="text-xs text-slate-600">None</span>}
                         </td>
                         {isManager && (
-                          <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-2 justify-end">
-                              <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                              <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-5 py-2.5 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
+                              <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
+                              <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-4 py-2 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
                             </div>
                           </td>
                         )}

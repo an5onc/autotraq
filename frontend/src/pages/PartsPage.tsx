@@ -5,7 +5,7 @@ import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartC
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -26,7 +26,14 @@ export function PartsPage() {
   const [showFitmentModal, setShowFitmentModal] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
+
+  // CSV Import state
+  interface ImportRow { sku: string; name: string; description?: string; condition?: string; minStock?: number; costCents?: number; valid: boolean; error?: string; }
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [partForm, setPartForm] = useState({ sku: '', name: '', description: '', condition: 'UNKNOWN' as PartCondition, minStock: 5, costCents: null as number | null });
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
@@ -265,6 +272,98 @@ export function PartsPage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      parseCSV(text);
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset for re-upload
+  };
+
+  const parseCSV = (text: string) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast.error('CSV must have a header row and at least one data row');
+      return;
+    }
+
+    const header = lines[0].toLowerCase();
+    const hasHeader = header.includes('sku') && header.includes('name');
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    const rows: ImportRow[] = dataLines.map(line => {
+      // Simple CSV parsing (handles quoted fields)
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (const char of line) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+        else current += char;
+      }
+      values.push(current.trim());
+
+      const sku = values[0]?.replace(/^"|"$/g, '') || '';
+      const name = values[1]?.replace(/^"|"$/g, '') || '';
+      const description = values[2]?.replace(/^"|"$/g, '') || undefined;
+      const condition = values[3]?.toUpperCase() || 'UNKNOWN';
+      const minStock = values[4] ? parseInt(values[4]) : 5;
+      const costCents = values[5] ? Math.round(parseFloat(values[5]) * 100) : undefined;
+
+      const valid = !!sku && !!name;
+      const error = !sku ? 'Missing SKU' : !name ? 'Missing name' : undefined;
+
+      return { sku, name, description, condition, minStock, costCents, valid, error };
+    });
+
+    setImportRows(rows);
+    setShowImportModal(true);
+  };
+
+  const handleImport = async () => {
+    const validRows = importRows.filter(r => r.valid);
+    if (validRows.length === 0) {
+      toast.error('No valid rows to import');
+      return;
+    }
+
+    setImporting(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const row of validRows) {
+      try {
+        await api.createPart(
+          row.sku,
+          row.name,
+          row.description,
+          row.condition as PartCondition || 'UNKNOWN',
+          row.minStock || 5,
+          row.costCents || null
+        );
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    setImporting(false);
+    setShowImportModal(false);
+    setImportRows([]);
+
+    if (failed === 0) {
+      toast.success(`Imported ${success} parts`);
+    } else {
+      toast.error(`${success} imported, ${failed} failed (likely duplicates)`);
+    }
+    loadData();
+  };
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -276,10 +375,14 @@ export function PartsPage() {
           </div>
           <div className="flex gap-2">
             <button onClick={exportToCSV} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-4 h-4" /> Export
             </button>
             {isManager && (
               <>
+                <input type="file" ref={fileInputRef} accept=".csv" onChange={handleFileSelect} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+                  <Upload className="w-4 h-4" /> Import
+                </button>
                 <button onClick={() => setShowVehicleModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
                   <Car className="w-4 h-4" /> Vehicle
                 </button>
@@ -575,6 +678,76 @@ export function PartsPage() {
           </button>
         </div>
       </Modal>}
+
+      {/* CSV Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setShowImportModal(false); setImportRows([]); }}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl mx-4 shadow-2xl animate-fade-in max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-amber-400" />
+                <h3 className="text-lg font-semibold text-white">Import Parts from CSV</h3>
+              </div>
+              <button onClick={() => { setShowImportModal(false); setImportRows([]); }} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="px-7 py-4 border-b border-slate-800 bg-slate-800/30 shrink-0">
+              <p className="text-sm text-slate-400">
+                <span className="text-white font-medium">{importRows.filter(r => r.valid).length}</span> valid rows, 
+                <span className="text-red-400 font-medium ml-1">{importRows.filter(r => !r.valid).length}</span> invalid
+              </p>
+              <p className="text-xs text-slate-500 mt-1">Expected format: SKU, Name, Description, Condition, MinStock, Cost</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-7 py-4">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-900">
+                  <tr className="border-b border-slate-700">
+                    <th className="text-left py-2 text-xs text-slate-500 font-medium">Status</th>
+                    <th className="text-left py-2 text-xs text-slate-500 font-medium">SKU</th>
+                    <th className="text-left py-2 text-xs text-slate-500 font-medium">Name</th>
+                    <th className="text-left py-2 text-xs text-slate-500 font-medium">Condition</th>
+                    <th className="text-right py-2 text-xs text-slate-500 font-medium">Min</th>
+                    <th className="text-right py-2 text-xs text-slate-500 font-medium">Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {importRows.map((row, i) => (
+                    <tr key={i} className={row.valid ? '' : 'bg-red-500/5'}>
+                      <td className="py-2">
+                        {row.valid ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4 text-red-400" />
+                            <span className="text-xs text-red-400">{row.error}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 font-mono text-xs text-amber-400">{row.sku || '—'}</td>
+                      <td className="py-2 text-white truncate max-w-[200px]">{row.name || '—'}</td>
+                      <td className="py-2 text-slate-400">{row.condition || 'UNKNOWN'}</td>
+                      <td className="py-2 text-right text-slate-400">{row.minStock ?? 5}</td>
+                      <td className="py-2 text-right text-slate-400">{row.costCents ? `$${(row.costCents / 100).toFixed(2)}` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-3 px-7 py-5 border-t border-slate-800 shrink-0">
+              <button onClick={() => { setShowImportModal(false); setImportRows([]); }} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 hover:text-white whitespace-nowrap transition-colors cursor-pointer">Cancel</button>
+              <button
+                onClick={handleImport}
+                disabled={importing || importRows.filter(r => r.valid).length === 0}
+                className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer"
+              >
+                {importing ? 'Importing...' : `Import ${importRows.filter(r => r.valid).length} Parts`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

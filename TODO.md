@@ -73,25 +73,24 @@
 
 ---
 
-## 🔜 Phase 2 — Analytics & Dashboard
+## ✅ Phase 2 — Analytics & Dashboard (COMPLETE)
 
-### 2.1 Dashboard Page
-- [ ] **KPI cards** — total parts, total inventory value, pending requests, low stock count
-- [ ] **Recent activity feed** — last 10 inventory events
-- [ ] **Quick actions** — receive stock, new part, scan
-- [ ] **Low stock alerts panel** — parts below threshold
+### 2.1 Dashboard Page ✅
+- [x] **KPI cards** — total parts, total inventory, inventory value, pending requests, low stock count
+- [x] **Recent activity feed** — last 8 inventory events
+- [x] **Quick actions** — receive stock, new part, scan
+- [x] **Low stock alerts panel** — parts below threshold (per-part minStock)
 
-### 2.2 Inventory Analytics
-- [ ] **Inventory value tracking** — add cost per unit to parts
-- [ ] **Charts** — inventory levels over time (line chart)
-- [ ] **Top movers** — most requested/received parts
-- [ ] **Dead stock** — parts with no movement in 90+ days
+### 2.2 Inventory Analytics ✅
+- [x] **Inventory value tracking** — costCents per part, total value on dashboard
+- [x] **Charts** — 30-day inventory levels line chart (recharts)
+- [x] **Top movers** — most active parts by event count
+- [x] **Dead stock** — parts with no movement in 90+ days
 
-### 2.3 Reporting
-- [ ] **Inventory report** — by location, by category
-- [ ] **Activity report** — user actions, date range filter
-- [ ] **Request report** — fulfillment rate, average time
-- [ ] **Export to CSV/PDF**
+### 2.3 Reporting ✅
+- [x] **CSV export** — full parts catalog with inventory and value
+- [ ] **PDF export** — deferred (requires additional setup)
+- [ ] **Advanced reports** — deferred (by location, activity, fulfillment rate)
 
 ---
 

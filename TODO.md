@@ -110,9 +110,9 @@
 
 ### 3.3 Bulk Operations
 - [x] **Bulk receive** — add multiple parts, set quantities, confirm all at once
-- [ ] **Bulk update** — select multiple parts, apply changes
+- [ ] **Bulk update** — select multiple parts, apply changes (deferred)
 - [x] **CSV export** — full parts catalog with inventory (on Parts page)
-- [ ] **CSV import** — parts, vehicles, inventory
+- [x] **CSV import** — parts with preview, validation, and batch create
 
 ### 3.4 UI Enhancements
 - [x] **Toast notifications** — react-hot-toast, success/error feedback

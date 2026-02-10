@@ -115,10 +115,10 @@
 - [ ] **CSV export** — full inventory dump
 
 ### 3.4 UI Enhancements
-- [ ] **Theme toggle** — dark/light mode
+- [x] **Toast notifications** — react-hot-toast, success/error feedback
+- [x] **Theme toggle** — dark/light/system mode with localStorage persistence
 - [ ] **Mobile responsive** — better touch targets, swipe actions
 - [ ] **Keyboard shortcuts** — documented, customizable
-- [ ] **Toast notifications** — success/error feedback
 - [ ] **Loading skeletons** — better perceived performance
 
 ---

@@ -6,6 +6,7 @@ import { unauthorized, forbidden } from '../utils/response.js';
 export interface JwtPayload {
   userId: number;
   email: string;
+  name: string;
   role: Role;
 }
 

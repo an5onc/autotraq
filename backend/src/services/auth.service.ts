@@ -46,7 +46,7 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
     select: { id: true, email: true, name: true, role: true },
   });
 
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const token = generateToken({ userId: user.id, email: user.email, name: user.name, role: user.role });
   return { user, token };
 }
 
@@ -86,7 +86,7 @@ export async function adminCreateUser(input: AdminCreateUserInput, createdById: 
     select: { id: true, email: true, name: true, role: true, loginBarcode: true },
   });
 
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const token = generateToken({ userId: user.id, email: user.email, name: user.name, role: user.role });
   return { user: { id: user.id, email: user.email, name: user.name, role: user.role }, token };
 }
 
@@ -109,7 +109,7 @@ export async function login(input: LoginInput): Promise<AuthResult> {
     throw new Error('Invalid email or password');
   }
 
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const token = generateToken({ userId: user.id, email: user.email, name: user.name, role: user.role });
   return {
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
     token,
@@ -128,7 +128,7 @@ export async function barcodeLogin(barcode: string): Promise<AuthResult> {
     throw new Error('Barcode login is only for admin and manager accounts');
   }
 
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const token = generateToken({ userId: user.id, email: user.email, name: user.name, role: user.role });
   return {
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
     token,

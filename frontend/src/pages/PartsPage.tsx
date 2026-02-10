@@ -27,7 +27,7 @@ export function PartsPage() {
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
 
-  const [partForm, setPartForm] = useState({ sku: '', name: '', description: '', condition: 'UNKNOWN' as PartCondition });
+  const [partForm, setPartForm] = useState({ sku: '', name: '', description: '', condition: 'UNKNOWN' as PartCondition, minStock: 5 });
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
@@ -151,12 +151,12 @@ export function PartsPage() {
   const handleCreatePart = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const part = await api.createPart(partForm.sku, partForm.name, partForm.description || undefined);
+      const part = await api.createPart(partForm.sku, partForm.name, partForm.description || undefined, partForm.condition, partForm.minStock);
       if (partVehicleId !== '') {
         try { await api.addFitment(part.id, partVehicleId); } catch {}
       }
       setShowPartModal(false);
-      setPartForm({ sku: '', name: '', description: '' });
+      setPartForm({ sku: '', name: '', description: '', condition: 'UNKNOWN', minStock: 5 });
       setPartVehicleYear(''); setPartVehicleMake(''); setPartVehicleId('');
       loadData();
     } catch (err) {
@@ -438,11 +438,16 @@ export function PartsPage() {
 
           <Field label="Name"><input type="text" className={inputCls} value={partForm.name} onChange={(e) => setPartForm({ ...partForm, name: e.target.value })} required placeholder="Brake Pad Set" /></Field>
           <Field label="Description (optional)"><input type="text" className={inputCls} value={partForm.description} onChange={(e) => setPartForm({ ...partForm, description: e.target.value })} placeholder="Front brake pads for sedans" /></Field>
-          <Field label="Condition">
-            <select className={selectCls} value={partForm.condition} onChange={(e) => setPartForm({ ...partForm, condition: e.target.value as PartCondition })}>
-              {PART_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Condition">
+              <select className={selectCls} value={partForm.condition} onChange={(e) => setPartForm({ ...partForm, condition: e.target.value as PartCondition })}>
+                {PART_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Min Stock">
+              <input type="number" className={inputCls} value={partForm.minStock} onChange={(e) => setPartForm({ ...partForm, minStock: parseInt(e.target.value) || 0 })} min={0} placeholder="5" />
+            </Field>
+          </div>
           <div className="border-t border-slate-800 pt-4">
             <p className="text-xs text-slate-500 mb-3">Optionally link a vehicle fitment:</p>
             <Field label="Year">

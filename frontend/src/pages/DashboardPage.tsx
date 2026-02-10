@@ -23,7 +23,7 @@ interface DashboardStats {
   pendingRequests: number;
   lowStockCount: number;
   recentEvents: InventoryEvent[];
-  lowStockParts: (Part & { onHand: number; minStock: number })[];
+  lowStockParts: (Part & { onHand: number })[];
 }
 
 export function DashboardPage() {
@@ -51,8 +51,7 @@ export function DashboardPage() {
       // Calculate total inventory
       const totalInventory = onHandRes.reduce((sum, item) => sum + item.quantity, 0);
 
-      // Find low stock parts (parts with quantity < 5 for now, will be configurable)
-      const lowStockThreshold = 5;
+      // Find low stock parts (parts with quantity < their minStock threshold)
       const partQuantities = new Map<number, number>();
       onHandRes.forEach(item => {
         const current = partQuantities.get(item.partId) || 0;
@@ -62,12 +61,11 @@ export function DashboardPage() {
       const lowStockParts = partsRes.parts
         .filter(part => {
           const qty = partQuantities.get(part.id) || 0;
-          return qty < lowStockThreshold && qty >= 0;
+          return qty < part.minStock && qty >= 0;
         })
         .map(part => ({
           ...part,
           onHand: partQuantities.get(part.id) || 0,
-          minStock: lowStockThreshold,
         }))
         .slice(0, 10);
 

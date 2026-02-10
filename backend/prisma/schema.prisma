@@ -75,6 +75,7 @@ model Part {
   name        String
   description String?        @db.Text
   condition   PartCondition  @default(UNKNOWN)
+  minStock    Int            @default(5) @map("min_stock") // Low stock threshold
   barcodeData String?        @db.Text @map("barcode_data")
   skuDecoded  String?        @db.Text @map("sku_decoded")
   createdAt   DateTime       @default(now())

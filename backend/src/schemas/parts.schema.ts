@@ -19,6 +19,7 @@ export const createPartSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().optional(),
   condition: partConditionEnum.optional().default('UNKNOWN'),
+  minStock: z.number().int().min(0).optional().default(5),
 });
 
 export const addFitmentSchema = z.object({
@@ -45,6 +46,7 @@ export const updatePartSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   condition: partConditionEnum.optional(),
+  minStock: z.number().int().min(0).optional(),
 });
 
 export type CreatePartInput = z.infer<typeof createPartSchema>;

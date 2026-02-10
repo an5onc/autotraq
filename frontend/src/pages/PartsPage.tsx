@@ -4,7 +4,7 @@ import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartC
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -218,6 +218,50 @@ export function PartsPage() {
   const selectCls = inputCls;
   const yearOptions = Array.from({ length: 27 }, (_, i) => 2000 + i).reverse();
 
+  const exportToCSV = async () => {
+    try {
+      // Fetch all parts for export
+      const allParts = await api.getParts(undefined, undefined, 5000);
+      const onHand = await api.getOnHand();
+      
+      // Build quantity map
+      const qtyMap = new Map<number, number>();
+      onHand.forEach(item => {
+        const current = qtyMap.get(item.partId) || 0;
+        qtyMap.set(item.partId, current + item.quantity);
+      });
+      
+      // Build CSV
+      const headers = ['SKU', 'Name', 'Description', 'Condition', 'Min Stock', 'Unit Cost', 'On Hand', 'Value'];
+      const rows = allParts.parts.map(part => {
+        const qty = qtyMap.get(part.id) || 0;
+        const cost = part.costCents ? (part.costCents / 100).toFixed(2) : '';
+        const value = part.costCents ? ((part.costCents * qty) / 100).toFixed(2) : '';
+        return [
+          part.sku,
+          `"${part.name.replace(/"/g, '""')}"`,
+          `"${(part.description || '').replace(/"/g, '""')}"`,
+          part.condition,
+          part.minStock.toString(),
+          cost,
+          qty.toString(),
+          value
+        ].join(',');
+      });
+      
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `parts-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to export parts');
+    }
+  };
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -227,19 +271,24 @@ export function PartsPage() {
             <h1 className="text-3xl font-bold text-white">Parts Catalog</h1>
             <p className="text-sm text-slate-500 mt-2">Manage parts, fitments, and interchange groups</p>
           </div>
-          {isManager && (
-            <div className="flex gap-2">
-              <button onClick={() => setShowVehicleModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
-                <Car className="w-4 h-4" /> Vehicle
-              </button>
-              <button onClick={() => setShowGroupModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
-                <Link2 className="w-4 h-4" /> Group
-              </button>
-              <button onClick={() => setShowPartModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">
-                <Plus className="w-4 h-4" /> New Part
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button onClick={exportToCSV} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+            {isManager && (
+              <>
+                <button onClick={() => setShowVehicleModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+                  <Car className="w-4 h-4" /> Vehicle
+                </button>
+                <button onClick={() => setShowGroupModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
+                  <Link2 className="w-4 h-4" /> Group
+                </button>
+                <button onClick={() => setShowPartModal(true)} className="inline-flex items-center gap-3 px-7 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">
+                  <Plus className="w-4 h-4" /> New Part
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}

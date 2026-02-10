@@ -132,10 +132,10 @@
 - [ ] **S3/Cloudflare R2 storage**
 
 ### 4.2 Audit & Compliance
-- [ ] **Full audit log** — who did what, when, with filters
-- [ ] **Data export** for compliance
-- [ ] **Soft delete** — archive instead of hard delete
-- [ ] **Change history** — per-record versioning
+- [x] **Full audit log** — who did what, when, filterable by entity/action
+- [ ] **Data export** for compliance (deferred)
+- [ ] **Soft delete** — archive instead of hard delete (deferred)
+- [ ] **Change history** — per-record versioning (deferred)
 
 ### 4.3 Notifications
 - [ ] **In-app notifications** — bell icon, unread count

@@ -109,10 +109,10 @@
 - [ ] **Suggested reorder quantities** — deferred
 
 ### 3.3 Bulk Operations
-- [ ] **Bulk receive** — scan multiple items, confirm all at once
+- [x] **Bulk receive** — add multiple parts, set quantities, confirm all at once
 - [ ] **Bulk update** — select multiple parts, apply changes
+- [x] **CSV export** — full parts catalog with inventory (on Parts page)
 - [ ] **CSV import** — parts, vehicles, inventory
-- [ ] **CSV export** — full inventory dump
 
 ### 3.4 UI Enhancements
 - [x] **Toast notifications** — react-hot-toast, success/error feedback

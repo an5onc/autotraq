@@ -13,7 +13,7 @@ function StatsCards({ data }: { data: AdvancedSearchResult }) {
   const { totalCount, conditionBreakdown, priceStats, inventoryStats } = data;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
       {/* Total Parts */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
         <div className="flex items-center gap-3 mb-2">

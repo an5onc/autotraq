@@ -49,7 +49,7 @@ export function LowStockAlertPanel({ onClose }: LowStockAlertPanelProps) {
   const displayAlerts = expanded ? visibleAlerts : visibleAlerts.slice(0, 3);
 
   return (
-    <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-800/50 rounded-2xl p-4 mb-6">
+    <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-800/50 rounded-2xl p-5 mb-8">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-orange-400" />
@@ -78,7 +78,7 @@ export function LowStockAlertPanel({ onClose }: LowStockAlertPanelProps) {
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {displayAlerts.map((alert) => (
           <div
             key={alert.partId}

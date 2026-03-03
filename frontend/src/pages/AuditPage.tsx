@@ -100,7 +100,7 @@ export function AuditPage() {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
         {/* Filters */}
-        <div className="flex gap-4 mb-6">
+        <div className="flex flex-wrap gap-4 mb-8">
           <select 
             className={inputCls}
             value={entityTypeFilter}

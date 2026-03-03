@@ -223,7 +223,7 @@ export function SolutionsPage() {
 
       {/* Step 1: Vehicle Selection */}
       {step >= 1 && step < 3 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2.5">
             <Car className="w-6 h-6 text-amber-400" />
             What's your vehicle?
@@ -275,7 +275,7 @@ export function SolutionsPage() {
 
       {/* Step 2: Part Search */}
       {step === 2 && canProceedToStep2 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2.5">
             <Search className="w-6 h-6 text-amber-400" />
             What do you need?

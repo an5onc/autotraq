@@ -391,7 +391,7 @@ export function PartsPage() {
             <h1 className="text-3xl font-bold text-white">Parts Catalog</h1>
             <p className="text-sm text-slate-500 mt-2">Manage parts, fitments, and interchange groups</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3">
             {selectedForPrint.size > 0 && (
               <button
                 onClick={async () => {

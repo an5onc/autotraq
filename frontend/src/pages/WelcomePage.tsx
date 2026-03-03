@@ -103,7 +103,7 @@ export function WelcomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative w-full pt-32 pb-20 px-6 overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(245,158,11,0.15),_transparent_50%)]" />

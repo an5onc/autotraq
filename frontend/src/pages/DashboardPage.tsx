@@ -211,7 +211,7 @@ export function DashboardPage() {
         <LowStockAlertPanel />
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
           <KPICard
             title="Total Parts"
             value={stats?.totalParts || 0}
@@ -309,7 +309,7 @@ export function DashboardPage() {
                 <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-emerald-400" /> Top Movers (30 Days)
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {topMovers.map((item, i) => (
                     <Link 
                       key={item.part.id} 
@@ -341,7 +341,7 @@ export function DashboardPage() {
                 <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                   <Archive className="w-4 h-4 text-orange-400" /> Dead Stock (90+ Days)
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {deadStock.map((item) => (
                     <Link 
                       key={item.part.id} 
@@ -378,7 +378,7 @@ export function DashboardPage() {
                 View All →
               </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {stats?.recentEvents.map((event) => {
                 const typeInfo = formatEventType(event.type);
                 const Icon = typeInfo.icon;
@@ -424,7 +424,7 @@ export function DashboardPage() {
                 View All →
               </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {stats?.lowStockParts.map((part) => (
                 <Link
                   key={part.id}

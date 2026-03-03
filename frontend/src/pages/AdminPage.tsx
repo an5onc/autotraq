@@ -231,7 +231,7 @@ export function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 overflow-x-auto">
+      <div className="flex gap-3 mb-10 overflow-x-auto">
         {tabs.filter(t => !t.adminOnly || isAdmin).map(t => (
           <button
             key={t.id}
@@ -260,7 +260,7 @@ export function AdminPage() {
 
       {/* USERS TAB */}
       {tab === 'users' && isAdmin && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-slate-400">{users.length} users · {adminCount}/4 admin slots used</p>
           </div>
@@ -414,7 +414,7 @@ export function AdminPage() {
           {pendingRequests.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-amber-400 uppercase tracking-wider mb-3">Pending Requests</h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {pendingRequests.map(r => (
                   <div key={r.id} className="bg-slate-900 border border-amber-500/20 rounded-xl p-5">
                     <div className="flex items-center justify-between">

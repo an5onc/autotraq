@@ -84,7 +84,7 @@ export function PartsSearchPage() {
         <div className="flex gap-6">
           {/* Sidebar: Hierarchy Browser */}
           <div className="w-72 shrink-0">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sticky top-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sticky top-6">
               <div className="flex items-center gap-2 mb-4">
                 <FolderTree className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-semibold text-white">System Hierarchy</h3>

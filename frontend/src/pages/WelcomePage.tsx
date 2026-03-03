@@ -117,7 +117,7 @@ export function WelcomePage() {
           />
         </div>
 
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div className="relative w-full max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-medium mb-8">
             <Gauge className="w-4 h-4" />
             Automotive Parts Inventory System

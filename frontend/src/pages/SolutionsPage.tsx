@@ -288,33 +288,40 @@ export function SolutionsPage() {
       </div>
 
       {/* Progress bar */}
-      <div className="flex items-center gap-2 mb-10">
-        {STEPS.map((s, i) => (
-          <div key={s.num} className="flex items-center gap-2">
-            <button
-              onClick={() => step > s.num ? setStep(s.num as Step) : undefined}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                step === s.num
-                  ? 'bg-amber-500 text-slate-900'
-                  : step > s.num
-                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer'
-                  : 'bg-slate-900 text-slate-600 cursor-default'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                step > s.num ? 'bg-emerald-500 text-white' : 'bg-current/20'
-              }`}>
-                {step > s.num ? '✓' : s.num + 1}
-              </span>
-              {s.label}
-            </button>
-            {i < STEPS.length - 1 && <ChevronRight className="w-4 h-4 text-slate-700" />}
-          </div>
-        ))}
+      <div className="flex items-center gap-1 mb-10">
+        {STEPS.map((s, i) => {
+          const isDone    = step > s.num;
+          const isActive  = step === s.num;
+
+          return (
+            <div key={s.num} className="flex items-center gap-1">
+              <button
+                onClick={() => isDone ? setStep(s.num as Step) : undefined}
+                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all select-none ${
+                  isActive  ? 'bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20' :
+                  isDone    ? 'bg-slate-800 text-white hover:bg-slate-700 cursor-pointer' :
+                              'bg-slate-900 text-slate-600 cursor-default'
+                }`}
+              >
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                  isActive  ? 'bg-slate-900/30 text-slate-900' :
+                  isDone    ? 'bg-emerald-500 text-white' :
+                              'bg-slate-800 text-slate-500'
+                }`}>
+                  {isDone ? '✓' : s.num + 1}
+                </span>
+                <span>{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <ChevronRight className={`w-4 h-4 shrink-0 mx-0.5 ${isDone ? 'text-slate-500' : 'text-slate-800'}`} />
+              )}
+            </div>
+          );
+        })}
         {step > 0 && (
           <button
             onClick={handleReset}
-            className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="ml-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Start Over
           </button>

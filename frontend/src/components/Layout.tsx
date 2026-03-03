@@ -8,7 +8,7 @@ import {
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
   Sun, Moon, Monitor, History,
-  FileSpreadsheet, Sparkles,
+  FileSpreadsheet, Sparkles, Menu, X as XIcon,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -101,6 +101,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const cycleTheme = () => {
     if (theme === 'dark') setTheme('light');
@@ -160,9 +161,42 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-slate-950">
-      {/* Sidebar */}
+
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 py-3">
+        <button onClick={() => setMobileOpen(true)} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
+          <Menu className="w-5 h-5" />
+        </button>
+        <span className="text-white font-bold text-sm">AutoTraq</span>
+        <NotificationBell />
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <aside className="relative z-10 w-[280px] bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
+              <span className="text-white font-bold">AutoTraq</span>
+              <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <nav className="flex-1 px-4 py-4 space-y-1">
+              {navItems.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                  <Icon className="w-4 h-4 shrink-0" />{label}
+                </NavLink>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Sidebar — desktop only */}
       <aside
-        className={`${collapsed ? 'w-20' : 'w-[280px]'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
+        className={`hidden md:flex ${collapsed ? 'w-20' : 'w-[280px]'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 transition-all duration-300 ease-in-out`}
       >
         {/* Logo */}
         <div className={`${collapsed ? 'px-4 py-5' : 'px-6 py-6'} border-b border-slate-800`}>
@@ -316,7 +350,7 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pt-12 md:pt-0">
         <div className="p-10 lg:p-12">
           {children}
         </div>

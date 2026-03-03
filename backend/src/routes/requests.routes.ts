@@ -28,4 +28,7 @@ router.post('/:id/fulfill', requireFulfillment, validateParams(idParamSchema), r
 // POST /api/requests/:id/cancel - Cancel request (manager+)
 router.post('/:id/cancel', requireManager, validateParams(idParamSchema), requestsController.cancelRequest);
 
+// POST /api/requests/scan-fulfill — find open request by SKU and fulfill it
+router.post('/scan-fulfill', requireFulfillment, requestsController.scanFulfill);
+
 export default router;

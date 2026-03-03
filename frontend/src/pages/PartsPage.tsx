@@ -17,6 +17,7 @@ export function PartsPage() {
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
   const [thumbnails, setThumbnails] = useState<Map<number, number>>(new Map()); // partId → imageId
   const [search, setSearch] = useState('');
+  const [conditionFilter, setConditionFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -141,14 +142,14 @@ export function PartsPage() {
     if (focus === 'search') searchInputRef.current?.focus();
   }, [searchParams]);
 
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [search, conditionFilter]);
 
-  useEffect(() => { loadData(); }, [search, page]);
+  useEffect(() => { loadData(); }, [search, conditionFilter, page]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [partsData, groupsData] = await Promise.all([api.getParts(search, page), api.getInterchangeGroups()]);
+      const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined), api.getInterchangeGroups()]);
       setParts(partsData.parts);
       setTotalPages(partsData.pagination.totalPages);
       setTotal(partsData.pagination.total);
@@ -452,24 +453,41 @@ export function PartsPage() {
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
-        {/* Search */}
-        <div className="relative mb-8">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search by SKU, name, or description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        {/* Search + Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="relative flex-1">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search by SKU, name, or description..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <select
+            value={conditionFilter}
+            onChange={e => { setConditionFilter(e.target.value); setPage(1); }}
+            className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-white focus:outline-none focus:border-amber-500/50 min-w-[150px] cursor-pointer"
+          >
+            <option value="">All Conditions</option>
+            {['NEW','EXCELLENT','GOOD','FAIR','POOR','CORE','SALVAGE','UNKNOWN'].map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <a
+            href={api.getReportUrl('inventory')}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors whitespace-nowrap"
+          >
+            <FileText className="w-4 h-4" /> PDF Report
+          </a>
         </div>
 
         {/* Table */}

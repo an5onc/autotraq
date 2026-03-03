@@ -39,18 +39,21 @@ export async function createPart(input: CreatePartInput) {
 }
 
 export async function getParts(query: PartsQuery) {
-  const { search, page, limit } = query;
+  const { search, condition, page, limit } = query;
   const skip = (page - 1) * limit;
 
-  const where = search
-    ? {
-        OR: [
-          { sku: { contains: search } },
-          { name: { contains: search } },
-          { description: { contains: search } },
-        ],
-      }
-    : {};
+  const conditionFilter = condition ? { condition } : {};
+
+  const where = {
+    ...conditionFilter,
+    ...(search ? {
+      OR: [
+        { sku: { contains: search } },
+        { name: { contains: search } },
+        { description: { contains: search } },
+      ],
+    } : {}),
+  };
 
   const [parts, total] = await Promise.all([
     prisma.part.findMany({

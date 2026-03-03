@@ -127,3 +127,26 @@ export async function cancelRequest(req: AuthenticatedRequest, res: Response) {
     serverError(res);
   }
 }
+
+// POST /api/requests/scan-fulfill
+// Given a scanned SKU, finds the oldest approved request containing that part and fulfills it
+export async function scanFulfill(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) { validationError(res, 'User not authenticated'); return; }
+    const { sku } = req.body;
+    if (!sku) { validationError(res, 'SKU is required'); return; }
+
+    const result = await requestsService.scanFulfill(sku, req.user.userId);
+    if (!result) {
+      notFound(res, `No approved requests found containing part SKU: ${sku}`);
+      return;
+    }
+    success(res, result);
+  } catch (err) {
+    if (err instanceof Error) {
+      validationError(res, err.message);
+      return;
+    }
+    serverError(res);
+  }
+}

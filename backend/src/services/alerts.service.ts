@@ -13,6 +13,8 @@ export interface LowStockAlert {
   name: string;
   currentQty: number;
   minStock: number;
+  suggestedReorder: number;
+  avgMonthlyUsage: number;
   locations: Array<{
     locationId: number;
     locationName: string;
@@ -70,12 +72,33 @@ export async function getLowStockAlerts(): Promise<LowStockAlert[]> {
 
     // Add to alerts if below threshold
     if (totalQty < part.minStock) {
+      // Calculate suggested reorder based on 90-day usage history
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const usageEvents = await prisma.inventoryEvent.aggregate({
+        where: {
+          partId: part.id,
+          type: 'FULFILL',
+          createdAt: { gte: ninetyDaysAgo },
+        },
+        _sum: { qtyDelta: true },
+      });
+      const totalUsed90Days = Math.abs(usageEvents._sum.qtyDelta || 0);
+      const avgMonthlyUsage = Math.round(totalUsed90Days / 3);
+      // Suggested: enough for 2 months + buffer to bring to minStock
+      const suggestedReorder = Math.max(
+        part.minStock - totalQty,
+        avgMonthlyUsage * 2
+      );
+
       lowStockAlerts.push({
         partId: part.id,
         sku: part.sku,
         name: part.name,
         currentQty: totalQty,
         minStock: part.minStock,
+        suggestedReorder,
+        avgMonthlyUsage,
         locations: locationQuantities
       });
     }

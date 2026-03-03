@@ -102,8 +102,16 @@ export function LowStockAlertPanel({ onClose }: LowStockAlertPanelProps) {
                 <span className={`text-xs font-bold ${
                   alert.currentQty === 0 ? 'text-red-400' : 'text-orange-400'
                 }`}>
-                  {alert.currentQty} / {alert.minStock} units
+                    {alert.currentQty} / {alert.minStock} units
                 </span>
+                {(alert as any).suggestedReorder > 0 && (
+                  <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-medium">
+                    Order {(alert as any).suggestedReorder}
+                  </span>
+                )}
+                {(alert as any).avgMonthlyUsage > 0 && (
+                  <span className="text-xs text-slate-500">~{(alert as any).avgMonthlyUsage}/mo</span>
+                )}
                 {alert.locations.length > 0 && (
                   <div className="flex items-center gap-1 text-xs text-slate-400">
                     <MapPin className="w-3 h-3" />

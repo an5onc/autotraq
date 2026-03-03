@@ -15,6 +15,8 @@ export function ScanPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usbMode, setUsbMode] = useState(false);
+  const [scanMode, setScanMode] = useState<'navigate' | 'fulfill'>('navigate');
+  const [fulfillResult, setFulfillResult] = useState<{ message: string; success: boolean } | null>(null);
   const [usbBuffer, setUsbBuffer] = useState('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const usbBufferRef = useRef('');
@@ -64,6 +66,22 @@ export function ScanPage() {
     setError('');
     setResult(null);
     setFoundPart(null);
+    setFulfillResult(null);
+
+    // Scan-to-fulfill mode
+    if (scanMode === 'fulfill') {
+      try {
+        await (api as any).scanFulfill(sku.trim());
+        setFulfillResult({ success: true, message: `✓ Request fulfilled for SKU: ${sku.trim()}` });
+      } catch (err) {
+        setFulfillResult({ success: false, message: err instanceof Error ? err.message : 'Fulfill failed' });
+      } finally {
+        setLoading(false);
+        setManualSku('');
+      }
+      return;
+    }
+
     try {
       // First, search for the part in inventory by SKU
       const partsResult = await api.getParts(sku.trim());
@@ -165,10 +183,36 @@ export function ScanPage() {
   return (
     <Layout>
       <div className="animate-fade-in max-w-3xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white">Scan Barcode</h1>
-          <p className="text-sm text-slate-500 mt-2">Scan or enter a SKU to jump straight to the part details</p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Scan Barcode</h1>
+            <p className="text-sm text-slate-500 mt-2">
+              {scanMode === 'navigate' ? 'Scan a SKU to jump to the part details' : 'Scan a SKU to fulfill the oldest matching open request'}
+            </p>
+          </div>
+          {/* Scan Mode Toggle */}
+          <div className="flex rounded-xl overflow-hidden border border-slate-700 shrink-0">
+            <button
+              onClick={() => { setScanMode('navigate'); setFulfillResult(null); }}
+              className={`px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${scanMode === 'navigate' ? 'bg-amber-500 text-slate-900' : 'bg-slate-900 text-slate-400 hover:text-white'}`}
+            >
+              Navigate
+            </button>
+            <button
+              onClick={() => { setScanMode('fulfill'); setFulfillResult(null); }}
+              className={`px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${scanMode === 'fulfill' ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}
+            >
+              Fulfill Request
+            </button>
+          </div>
         </div>
+
+        {/* Fulfill Result Banner */}
+        {fulfillResult && (
+          <div className={`mb-6 p-4 rounded-xl border text-sm font-medium ${fulfillResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+            {fulfillResult.message}
+          </div>
+        )}
 
         {/* Camera Scanner */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">

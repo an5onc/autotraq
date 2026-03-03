@@ -259,3 +259,33 @@ export function canTransition(
 
   return validTransitions[currentStatus].includes(targetStatus);
 }
+
+// Find oldest APPROVED request containing a part with the given SKU and fulfill it
+export async function scanFulfill(sku: string, userId: number) {
+  // Find the part
+  const part = await prisma.part.findUnique({ where: { sku } });
+  if (!part) throw new Error(`Part not found: ${sku}`);
+
+  // Find oldest approved request containing this part
+  const request = await prisma.request.findFirst({
+    where: {
+      status: RequestStatus.APPROVED,
+      items: { some: { partId: part.id } },
+    },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      items: { include: { part: true, location: true } },
+    },
+  });
+
+  if (!request) return null;
+
+  // Validate all items have locations
+  for (const item of request.items) {
+    if (!item.locationId) {
+      throw new Error(`Request #${request.id} item for ${item.part.sku} has no location set — assign a location before fulfilling`);
+    }
+  }
+
+  return fulfillRequest(request.id, userId);
+}

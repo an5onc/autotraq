@@ -146,13 +146,22 @@ class ApiClient {
   }
 
   // Parts
-  async getParts(search?: string, page?: number, limit?: number) {
+  async getParts(search?: string, page?: number, limit?: number, condition?: string) {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (page) p.set('page', String(page));
     if (limit) p.set('limit', String(limit));
+    if (condition) p.set('condition', condition);
     const qs = p.toString();
     return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
+  }
+
+  async scanFulfill(sku: string) {
+    return this.request('/requests/scan-fulfill', { method: 'POST', body: JSON.stringify({ sku }) });
+  }
+
+  getReportUrl(type: 'inventory' | 'low-stock') {
+    return `${API_BASE}/reports/${type}.pdf`;
   }
 
   async createPart(sku: string, name: string, description?: string, condition?: PartCondition, minStock?: number, costCents?: number | null) {

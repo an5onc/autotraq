@@ -41,6 +41,8 @@ export function PartsPage() {
   const [vehicleForm, setVehicleForm] = useState({ year: 2024, make: '', model: '', trim: '' });
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<number>>(new Set());
+  const [printingLabels, setPrintingLabels] = useState(false);
 
   // SKU generation state
   const [useSkuGen, setUseSkuGen] = useState(true);
@@ -389,6 +391,42 @@ export function PartsPage() {
             <p className="text-sm text-slate-500 mt-2">Manage parts, fitments, and interchange groups</p>
           </div>
           <div className="flex gap-2">
+            {selectedForPrint.size > 0 && (
+              <button
+                onClick={async () => {
+                  setPrintingLabels(true);
+                  try {
+                    const selected = parts.filter(p => selectedForPrint.has(p.id) && p.barcodeData);
+                    if (selected.length === 0) { toast.error('No barcodes available for selected parts'); return; }
+                    const win = window.open('', '_blank');
+                    if (!win) return;
+                    const labels = selected.map(p => `
+                      <div class="label">
+                        <img src="data:image/png;base64,${p.barcodeData}" />
+                        <div class="sku">${p.sku}</div>
+                        <div class="name">${p.name}</div>
+                      </div>`).join('');
+                    win.document.write(`<html><head><title>AutoTraq Labels</title><style>
+                      body{font-family:monospace;margin:0;padding:10px;background:#fff}
+                      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+                      .label{border:1px solid #ccc;padding:8px;text-align:center;page-break-inside:avoid}
+                      .label img{width:100%;max-height:50px;object-fit:contain}
+                      .sku{font-size:11px;font-weight:bold;margin-top:4px}
+                      .name{font-size:9px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                      @media print{body{padding:0}.grid{gap:4px}}
+                    </style></head><body><div class="grid">${labels}</div></body></html>`);
+                    win.document.close();
+                    win.print();
+                  } finally {
+                    setPrintingLabels(false);
+                  }
+                }}
+                disabled={printingLabels}
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+              >
+                <Printer className="w-4 h-4" /> Print {selectedForPrint.size} Label{selectedForPrint.size !== 1 ? 's' : ''}
+              </button>
+            )}
             <button onClick={exportToCSV} className="inline-flex items-center gap-3 px-6 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-sm whitespace-nowrap text-slate-300 hover:text-white hover:border-slate-600 transition-colors cursor-pointer">
               <Download className="w-4 h-4" /> Export
             </button>
@@ -451,6 +489,12 @@ export function PartsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-800">
+                      <th className="px-4 py-5 w-10">
+                        <input type="checkbox" className="rounded border-slate-600"
+                          checked={parts.length > 0 && parts.every(p => selectedForPrint.has(p.id))}
+                          onChange={e => setSelectedForPrint(e.target.checked ? new Set(parts.map(p => p.id)) : new Set())}
+                        />
+                      </th>
                       <th className="px-4 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
                       <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
                       <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
@@ -464,6 +508,12 @@ export function PartsPage() {
                   <tbody className="divide-y divide-slate-800/50">
                     {parts.map((part) => (
                       <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <input type="checkbox" className="rounded border-slate-600"
+                            checked={selectedForPrint.has(part.id)}
+                            onChange={e => setSelectedForPrint(prev => { const n = new Set(prev); e.target.checked ? n.add(part.id) : n.delete(part.id); return n; })}
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           {thumbnails.has(part.id) ? (
                             <img

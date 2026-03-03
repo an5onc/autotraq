@@ -209,8 +209,9 @@ export async function findSolutions(query: SolutionQuery): Promise<SolutionResul
   };
 }
 
-export async function getAvailableMakes(): Promise<string[]> {
+export async function getAvailableMakes(year?: number): Promise<string[]> {
   const makes = await prisma.vehicle.findMany({
+    where: year ? { year } : undefined,
     select: { make: true },
     distinct: ['make'],
     orderBy: { make: 'asc' },
@@ -218,9 +219,9 @@ export async function getAvailableMakes(): Promise<string[]> {
   return makes.map(m => m.make);
 }
 
-export async function getModelsByMake(make: string): Promise<string[]> {
+export async function getModelsByMake(make: string, year?: number): Promise<string[]> {
   const models = await prisma.vehicle.findMany({
-    where: { make },
+    where: year ? { make, year } : { make },
     select: { model: true },
     distinct: ['model'],
     orderBy: { model: 'asc' },
@@ -228,12 +229,127 @@ export async function getModelsByMake(make: string): Promise<string[]> {
   return models.map(m => m.model);
 }
 
-export async function getYearsByMakeModel(make: string, model: string): Promise<number[]> {
+export async function getYearsByMakeModel(make?: string, model?: string): Promise<number[]> {
+  const where: any = {};
+  if (make) where.make = make;
+  if (model) where.model = model;
   const years = await prisma.vehicle.findMany({
-    where: { make, model },
+    where: Object.keys(where).length > 0 ? where : undefined,
     select: { year: true },
     distinct: ['year'],
     orderBy: { year: 'desc' },
   });
   return years.map(y => y.year);
+}
+
+export async function findRelatedParts(partIds: number[], vehicleId?: number): Promise<any[]> {
+  if (partIds.length === 0) return [];
+
+  // Get the source parts to find SKU prefixes + names for category matching
+  const sourceParts = await prisma.part.findMany({
+    where: { id: { in: partIds } },
+    select: { id: true, sku: true, name: true },
+  });
+
+  const skuPrefixes = [...new Set(sourceParts.map(p => {
+    const parts = p.sku.split('-');
+    return parts[0]; // top-level category prefix
+  }))];
+
+  // Find parts in same SKU family that aren't already in results
+  const related = await prisma.part.findMany({
+    where: {
+      sku: { in: skuPrefixes.map(prefix => prefix) },
+      id: { notIn: partIds },
+      ...(vehicleId ? {
+        fitments: { some: { vehicleId } }
+      } : {}),
+    },
+    include: { inventoryEvents: true },
+    take: 8,
+  });
+
+  // Also do name-based similarity — common part pairings
+  const COMMON_PAIRS: Record<string, string[]> = {
+    'brake pad': ['rotor', 'brake fluid', 'caliper', 'brake hardware'],
+    'rotor': ['brake pad', 'caliper', 'brake hardware'],
+    'alternator': ['belt', 'battery', 'tensioner'],
+    'water pump': ['thermostat', 'coolant', 'belt', 'hose'],
+    'timing belt': ['water pump', 'tensioner', 'idler'],
+    'spark plug': ['ignition wire', 'coil pack', 'air filter'],
+    'oxygen sensor': ['air filter', 'fuel filter', 'catalytic converter'],
+    'ball joint': ['tie rod', 'control arm', 'alignment'],
+    'strut': ['spring', 'mount', 'sway bar link'],
+    'fuel pump': ['fuel filter', 'strainer', 'sending unit'],
+  };
+
+  const nameKeywords = sourceParts.flatMap(p => {
+    const name = p.name.toLowerCase();
+    return Object.entries(COMMON_PAIRS)
+      .filter(([key]) => name.includes(key))
+      .flatMap(([, pairs]) => pairs);
+  });
+
+  let namePairs: any[] = [];
+  if (nameKeywords.length > 0) {
+    namePairs = await prisma.part.findMany({
+      where: {
+        id: { notIn: [...partIds, ...related.map(p => p.id)] },
+        OR: nameKeywords.map(kw => ({ name: { contains: kw } })),
+        ...(vehicleId ? {
+          fitments: { some: { vehicleId } }
+        } : {}),
+      },
+      include: { inventoryEvents: true },
+      take: 6,
+    });
+  }
+
+  const allRelated = [...related, ...namePairs];
+
+  return allRelated.map(part => {
+    const stock = part.inventoryEvents.reduce((sum: number, e: any) => sum + e.qtyDelta, 0);
+    return {
+      id: part.id,
+      name: part.name,
+      sku: part.sku,
+      condition: part.condition,
+      costCents: part.costCents,
+      stockOnHand: stock,
+    };
+  });
+}
+
+export async function findBySkuOrOem(query: string): Promise<any[]> {
+  const parts = await prisma.part.findMany({
+    where: {
+      OR: [
+        { sku: { contains: query } },
+        { name: { contains: query } },
+        { description: { contains: query } },
+      ],
+    },
+    include: {
+      fitments: {
+        include: { vehicle: true },
+        take: 5,
+      },
+      inventoryEvents: true,
+    },
+    take: 20,
+  });
+
+  return parts.map(part => {
+    const stock = part.inventoryEvents.reduce((sum, e) => sum + e.qtyDelta, 0);
+    return {
+      id: part.id,
+      name: part.name,
+      sku: part.sku,
+      description: part.description,
+      condition: part.condition,
+      costCents: part.costCents,
+      stockOnHand: stock,
+      fitsVehicles: part.fitments.map(f => `${f.vehicle.year} ${f.vehicle.make} ${f.vehicle.model}`),
+    };
+  });
 }

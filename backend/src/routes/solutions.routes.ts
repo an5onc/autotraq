@@ -34,10 +34,11 @@ router.get('/search', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// GET /api/solutions/makes — available makes
-router.get('/makes', async (_req: AuthenticatedRequest, res: Response) => {
+// GET /api/solutions/makes — available makes (optionally filtered by year)
+router.get('/makes', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const makes = await solutionsService.getAvailableMakes();
+    const { year } = req.query;
+    const makes = await solutionsService.getAvailableMakes(year ? parseInt(year as string) : undefined);
     success(res, makes);
   } catch (err) {
     console.error('Get makes error:', err);
@@ -45,15 +46,15 @@ router.get('/makes', async (_req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// GET /api/solutions/models?make=Ford — models for a make
+// GET /api/solutions/models?make=Ford&year=2002 — models for make (optionally filtered by year)
 router.get('/models', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { make } = req.query;
+    const { make, year } = req.query;
     if (!make) {
       validationError(res, 'make is required');
       return;
     }
-    const models = await solutionsService.getModelsByMake(make as string);
+    const models = await solutionsService.getModelsByMake(make as string, year ? parseInt(year as string) : undefined);
     success(res, models);
   } catch (err) {
     console.error('Get models error:', err);
@@ -62,17 +63,50 @@ router.get('/models', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 // GET /api/solutions/years?make=Ford&model=F150 — years for make+model
+// GET /api/solutions/years — all distinct years (for year-first flow)
 router.get('/years', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { make, model } = req.query;
-    if (!make || !model) {
-      validationError(res, 'make and model are required');
-      return;
-    }
-    const years = await solutionsService.getYearsByMakeModel(make as string, model as string);
+    const years = await solutionsService.getYearsByMakeModel(
+      make as string | undefined,
+      model as string | undefined
+    );
     success(res, years);
   } catch (err) {
     console.error('Get years error:', err);
+    serverError(res);
+  }
+});
+
+// GET /api/solutions/related?partIds=1,2,3 — complementary/related parts
+router.get('/related', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { partIds, vehicleId } = req.query;
+    if (!partIds) {
+      validationError(res, 'partIds is required');
+      return;
+    }
+    const ids = (partIds as string).split(',').map(Number).filter(Boolean);
+    const related = await solutionsService.findRelatedParts(ids, vehicleId ? parseInt(vehicleId as string) : undefined);
+    success(res, related);
+  } catch (err) {
+    console.error('Get related error:', err);
+    serverError(res);
+  }
+});
+
+// GET /api/solutions/by-sku?q=ABC-123 — OEM/cross-ref number lookup
+router.get('/by-sku', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      validationError(res, 'q is required');
+      return;
+    }
+    const parts = await solutionsService.findBySkuOrOem(q as string);
+    success(res, parts);
+  } catch (err) {
+    console.error('SKU lookup error:', err);
     serverError(res);
   }
 });

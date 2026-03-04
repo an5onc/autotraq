@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 3001;
 
 // Security headers
 app.use(helmet({
-  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+  contentSecurityPolicy: false,          // handled at CDN/Cloudflare level
+  crossOriginResourcePolicy: false,      // allow cross-origin image loads from frontend
 }));
 
 // Compression

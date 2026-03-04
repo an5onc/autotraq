@@ -31,8 +31,9 @@ app.use(
 // Trust proxy (Railway / Cloudflare sit in front)
 app.set('trust proxy', 1);
 
-// JSON body parser
-app.use(express.json());
+// JSON body parser — 25mb limit for base64 image uploads
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Rate limiting for auth endpoints (per CLAUDE.md Section 7)
 const authLimiter = rateLimit({

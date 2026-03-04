@@ -629,11 +629,11 @@ export function SolutionsPage() {
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-amber-500 text-slate-900'
-                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600 hover:text-white'
                     }`}
                   >
                     {tab.label}
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900/20' : 'bg-slate-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900/20 text-slate-900' : 'bg-slate-500 text-white'}`}>
                       {tab.count}
                     </span>
                   </button>

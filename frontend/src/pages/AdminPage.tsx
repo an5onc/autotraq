@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react';
 import { Barcode } from '../components/Barcode';
 import JsBarcode from 'jsbarcode';
 import { useSearchParams } from 'react-router-dom';
-import { api, UserWithCreator, RoleRequest } from '../api/client';
+import { api, UserWithCreator, RoleRequest, Part, PartCondition, PART_CONDITIONS } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import {
   Users, ShieldCheck, ShieldAlert, UserPlus, Check, X, RefreshCw,
-  QrCode, Printer, ChevronDown, ChevronUp, KeyRound, Lock, Trash2,
+  QrCode, Printer, ChevronDown, ChevronUp, KeyRound, Lock, Trash2, DollarSign,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-type Tab = 'users' | 'requests' | 'create' | 'my-barcode' | 'security';
+type Tab = 'users' | 'requests' | 'create' | 'my-barcode' | 'security' | 'pricing';
 
 export function AdminPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
   const [searchParams] = useSearchParams();
   const initialTab = (searchParams.get('tab') as Tab) || (isAdmin ? 'users' : 'my-barcode');
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -40,7 +41,24 @@ export function AdminPage() {
   // Change own password
   const [changePass, setChangePass] = useState({ current: '', new: '', confirm: '' });
 
+  // Pricing state
+  const [conditionMultipliers, setConditionMultipliers] = useState<Record<PartCondition, number>>({
+    NEW: 1.5,
+    EXCELLENT: 1.4,
+    GOOD: 1.3,
+    FAIR: 1.2,
+    POOR: 1.1,
+    CORE: 1.0,
+    SALVAGE: 0.5,
+    UNKNOWN: 1.0,
+  });
+  const [conditionStats, setConditionStats] = useState<Record<PartCondition, { count: number; avgCost: number }>>({} as any);
+  const [partsForPricing, setPartsForPricing] = useState<Part[]>([]);
+  const [pricingSearch, setPricingSearch] = useState('');
+  const [pricingUpdates, setPricingUpdates] = useState<Map<number, { retailPriceCents: number; isOem: boolean; partType: string }>>(new Map());
+
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (tab === 'pricing' && (isAdmin || isManager)) loadPricingData(); }, [tab]);
 
   const loadData = async () => {
     try {
@@ -62,6 +80,73 @@ export function AdminPage() {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPricingData = async () => {
+    try {
+      // Load all parts to calculate condition stats
+      const { parts } = await api.getParts('', 1, 1000);
+      setPartsForPricing(parts);
+
+      // Calculate stats by condition
+      const stats: Record<string, { count: number; totalCost: number }> = {};
+      for (const part of parts) {
+        if (!stats[part.condition]) {
+          stats[part.condition] = { count: 0, totalCost: 0 };
+        }
+        stats[part.condition].count++;
+        if (part.costCents) {
+          stats[part.condition].totalCost += part.costCents;
+        }
+      }
+
+      const finalStats: Record<string, { count: number; avgCost: number }> = {};
+      for (const [condition, data] of Object.entries(stats)) {
+        finalStats[condition] = {
+          count: data.count,
+          avgCost: data.count > 0 ? Math.round(data.totalCost / data.count) : 0,
+        };
+      }
+      setConditionStats(finalStats as any);
+    } catch (err) {
+      toast.error('Failed to load pricing data');
+    }
+  };
+
+  const handleBulkPriceByCondition = async (condition: PartCondition) => {
+    const multiplier = conditionMultipliers[condition];
+    if (!multiplier || multiplier <= 0) {
+      toast.error('Invalid multiplier');
+      return;
+    }
+
+    try {
+      const result = await api.bulkUpdatePricesByCondition(condition, multiplier);
+      toast.success(result.message);
+      loadPricingData(); // Reload to show updated data
+    } catch (err) {
+      toast.error('Failed to update prices');
+    }
+  };
+
+  const handleSaveAllPriceChanges = async () => {
+    if (pricingUpdates.size === 0) {
+      toast.error('No changes to save');
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      for (const [partId, updates] of pricingUpdates.entries()) {
+        await api.updatePartPricing(partId, updates);
+        successCount++;
+      }
+      toast.success(`Updated ${successCount} parts`);
+      setPricingUpdates(new Map());
+      loadPricingData(); // Reload to show updated data
+    } catch (err) {
+      toast.error('Failed to save some price changes');
     }
   };
 
@@ -205,10 +290,11 @@ export function AdminPage() {
   const pastRequests = roleRequests.filter(r => r.status !== 'PENDING');
   const adminCount = users.filter(u => u.role === 'admin').length;
 
-  const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: number; adminOnly?: boolean }[] = [
+  const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: number; adminOnly?: boolean; managerOnly?: boolean }[] = [
     { id: 'users', label: 'Users', icon: Users, adminOnly: true },
     { id: 'requests', label: 'Role Requests', icon: ShieldAlert, badge: pendingRequests.length, adminOnly: true },
     { id: 'create', label: 'Create User', icon: UserPlus, adminOnly: true },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign, managerOnly: true },
     { id: 'my-barcode', label: 'My Barcode', icon: QrCode },
     { id: 'security', label: 'Security', icon: Lock },
   ];
@@ -232,7 +318,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-3 mb-10 overflow-x-auto">
-        {tabs.filter(t => !t.adminOnly || isAdmin).map(t => (
+        {tabs.filter(t => (!t.adminOnly || isAdmin) && (!t.managerOnly || isAdmin || isManager)).map(t => (
           <button
             key={t.id}
             onClick={() => { setTab(t.id); setError(''); setSuccess(''); }}
@@ -586,6 +672,212 @@ export function AdminPage() {
           )}
         </div>
       )}
+      {/* PRICING TAB */}
+      {tab === 'pricing' && (isAdmin || isManager) && (
+        <div className="space-y-8">
+          {/* Section A: Bulk by Condition */}
+          <div>
+            <h3 className="text-xl font-bold text-white mb-4">Bulk Pricing by Condition</h3>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Condition</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Part Count</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Avg Cost</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Multiplier</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Result</th>
+                    <th className="px-6 py-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {PART_CONDITIONS.map((cond) => {
+                    const stats = conditionStats[cond.value as PartCondition];
+                    const multiplier = conditionMultipliers[cond.value as PartCondition];
+                    return (
+                      <tr key={cond.value}>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-lg text-xs font-semibold bg-${cond.color}-500/10 text-${cond.color}-400`}>
+                            {cond.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-white">
+                          {stats?.count || 0}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-400">
+                          {stats?.avgCost ? `$${(stats.avgCost / 100).toFixed(2)}` : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={multiplier}
+                            onChange={(e) => setConditionMultipliers(prev => ({
+                              ...prev,
+                              [cond.value]: parseFloat(e.target.value) || 0
+                            }))}
+                            className="w-20 px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white"
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-sm text-amber-400 font-medium">
+                          {stats?.avgCost && multiplier ? `$${((stats.avgCost * multiplier) / 100).toFixed(2)}` : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleBulkPriceByCondition(cond.value as PartCondition)}
+                            disabled={!stats?.count || !multiplier}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-lg text-sm transition-colors"
+                          >
+                            Apply
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section B: Individual Part Pricing */}
+          <div>
+            <h3 className="text-xl font-bold text-white mb-4">Individual Part Pricing</h3>
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search parts by SKU or name..."
+                value={pricingSearch}
+                onChange={(e) => setPricingSearch(e.target.value)}
+                className="w-full max-w-md px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-800">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">SKU</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Condition</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Cost</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Retail Price</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">OEM</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {partsForPricing
+                      .filter(p => !pricingSearch ||
+                        p.sku.toLowerCase().includes(pricingSearch.toLowerCase()) ||
+                        p.name.toLowerCase().includes(pricingSearch.toLowerCase())
+                      )
+                      .slice(0, 50)
+                      .map((part) => {
+                        const updates = pricingUpdates.get(part.id);
+                        const retailPrice = updates?.retailPriceCents ?? part.retailPriceCents;
+                        const isOem = updates?.isOem ?? part.isOem;
+                        const partType = updates?.partType ?? part.partType;
+
+                        return (
+                          <tr key={part.id}>
+                            <td className="px-6 py-4">
+                              <span className="font-mono text-xs text-amber-400">{part.sku}</span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-white">{part.name}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded text-xs font-semibold bg-slate-700 text-slate-300`}>
+                                {part.condition}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-400">
+                              {part.costCents ? `$${(part.costCents / 100).toFixed(2)}` : '—'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={retailPrice ? (retailPrice / 100).toFixed(2) : ''}
+                                onChange={(e) => {
+                                  const cents = Math.round(parseFloat(e.target.value) * 100);
+                                  setPricingUpdates(prev => {
+                                    const map = new Map(prev);
+                                    const current = map.get(part.id) || {
+                                      retailPriceCents: part.retailPriceCents || 0,
+                                      isOem: part.isOem || false,
+                                      partType: part.partType || 'Aftermarket'
+                                    };
+                                    map.set(part.id, { ...current, retailPriceCents: cents });
+                                    return map;
+                                  });
+                                }}
+                                className="w-24 px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white"
+                                placeholder="0.00"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={isOem || false}
+                                onChange={(e) => {
+                                  setPricingUpdates(prev => {
+                                    const map = new Map(prev);
+                                    const current = map.get(part.id) || {
+                                      retailPriceCents: part.retailPriceCents || 0,
+                                      isOem: part.isOem || false,
+                                      partType: part.partType || 'Aftermarket'
+                                    };
+                                    map.set(part.id, { ...current, isOem: e.target.checked });
+                                    return map;
+                                  });
+                                }}
+                                className="rounded border-slate-600"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <select
+                                value={partType || 'Aftermarket'}
+                                onChange={(e) => {
+                                  setPricingUpdates(prev => {
+                                    const map = new Map(prev);
+                                    const current = map.get(part.id) || {
+                                      retailPriceCents: part.retailPriceCents || 0,
+                                      isOem: part.isOem || false,
+                                      partType: part.partType || 'Aftermarket'
+                                    };
+                                    map.set(part.id, { ...current, partType: e.target.value });
+                                    return map;
+                                  });
+                                }}
+                                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white"
+                              >
+                                <option value="OEM">OEM</option>
+                                <option value="Aftermarket">Aftermarket</option>
+                                <option value="Remanufactured">Remanufactured</option>
+                              </select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+              {pricingUpdates.size > 0 && (
+                <div className="p-4 border-t border-slate-800 flex justify-end">
+                  <button
+                    onClick={handleSaveAllPriceChanges}
+                    className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl transition-colors"
+                  >
+                    Save All Changes ({pricingUpdates.size} parts)
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SECURITY TAB — Change own password */}
       {tab === 'security' && (
         <div className="max-w-lg">

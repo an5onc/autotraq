@@ -37,7 +37,7 @@ export async function createPart(req: AuthenticatedRequest, res: Response) {
 
 export async function getParts(req: AuthenticatedRequest, res: Response) {
   try {
-    const query: PartsQuery = req.query as unknown as PartsQuery;
+    const query: PartsQuery & { zip?: string } = req.query as any;
     const result = await partsService.getParts(query);
     success(res, result);
   } catch (err) {

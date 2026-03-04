@@ -146,12 +146,13 @@ class ApiClient {
   }
 
   // Parts
-  async getParts(search?: string, page?: number, limit?: number, condition?: string) {
+  async getParts(search?: string, page?: number, limit?: number, condition?: string, zip?: string) {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (page) p.set('page', String(page));
     if (limit) p.set('limit', String(limit));
     if (condition) p.set('condition', condition);
+    if (zip) p.set('zip', zip);
     const qs = p.toString();
     return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
   }
@@ -546,6 +547,28 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // Pricing
+  async bulkUpdatePrices(partIds: number[], retailPriceCents: number) {
+    return this.request<{ success: boolean; message: string; count: number }>('/prices/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ partIds, retailPriceCents }),
+    });
+  }
+
+  async bulkUpdatePricesByCondition(condition: PartCondition, multiplier: number) {
+    return this.request<{ success: boolean; message: string; count: number }>('/prices/bulk-by-condition', {
+      method: 'POST',
+      body: JSON.stringify({ condition, multiplier }),
+    });
+  }
+
+  async updatePartPricing(partId: number, data: { retailPriceCents?: number; isOem?: boolean; partType?: string }) {
+    return this.request<{ success: boolean; part: Part }>(`/prices/${partId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Types
@@ -569,6 +592,17 @@ export const PART_CONDITIONS: { value: PartCondition; label: string; color: stri
   { value: 'UNKNOWN', label: 'Unknown', color: 'slate' },
 ];
 
+export interface StockLocation {
+  locationId: number;
+  locationName: string;
+  quantity: number;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  distanceMiles?: number;
+}
+
 export interface Part {
   id: number;
   sku: string;
@@ -577,8 +611,13 @@ export interface Part {
   condition: PartCondition;
   minStock: number;
   costCents?: number | null;
+  retailPriceCents?: number | null;
+  isOem?: boolean;
+  partType?: string;
   barcodeData?: string;
   skuDecoded?: string;
+  stockOnHand?: number;
+  stockLocations?: StockLocation[];
   fitments?: PartFitment[];
   interchangeMembers?: InterchangeGroupMember[];
   images?: PartImage[];

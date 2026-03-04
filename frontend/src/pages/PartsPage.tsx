@@ -5,8 +5,9 @@ import { api, Part, InterchangeGroup, MakeCode, SystemCode, ComponentCode, PartC
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
+import { PartCard } from '../components/PartCard';
 import { SkeletonTable } from '../components/Skeleton';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, ImageIcon, Info } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -18,6 +19,7 @@ export function PartsPage() {
   const [thumbnails, setThumbnails] = useState<Map<number, number>>(new Map()); // partId → imageId
   const [search, setSearch] = useState('');
   const [conditionFilter, setConditionFilter] = useState('');
+  const [userZip, setUserZip] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -143,14 +145,14 @@ export function PartsPage() {
     if (focus === 'search') searchInputRef.current?.focus();
   }, [searchParams]);
 
-  useEffect(() => { setPage(1); }, [search, conditionFilter]);
+  useEffect(() => { setPage(1); }, [search, conditionFilter, userZip]);
 
-  useEffect(() => { loadData(); }, [search, conditionFilter, page]);
+  useEffect(() => { loadData(); }, [search, conditionFilter, page, userZip]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined), api.getInterchangeGroups()]);
+      const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined, userZip || undefined), api.getInterchangeGroups()]);
       setParts(partsData.parts);
       setTotalPages(partsData.pagination.totalPages);
       setTotal(partsData.pagination.total);
@@ -454,6 +456,21 @@ export function PartsPage() {
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
+        {/* ZIP Code Search Bar */}
+        <div className="mb-6 p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-slate-400 whitespace-nowrap">ZIP Code:</label>
+            <input
+              type="text"
+              placeholder="Enter ZIP code..."
+              value={userZip}
+              onChange={(e) => setUserZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              className="flex-1 max-w-xs px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+            />
+            <span className="text-xs text-slate-500">Show nearest warehouse first</span>
+          </div>
+        </div>
+
         {/* Search + Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="relative flex-1">
@@ -498,106 +515,29 @@ export function PartsPage() {
           </a>
         </div>
 
-        {/* Table */}
+        {/* Parts Grid */}
         {loading ? (
           <SkeletonTable rows={8} cols={6} />
         ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div>
           {parts.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
               <Wrench className="w-12 h-12 text-slate-700 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-slate-400">No parts found</h3>
               <p className="text-sm text-slate-600 mt-1">Create your first part to get started</p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="px-4 py-5 w-10">
-                        <input type="checkbox" className="rounded border-slate-600"
-                          checked={parts.length > 0 && parts.every(p => selectedForPrint.has(p.id))}
-                          onChange={e => setSelectedForPrint(e.target.checked ? new Set(parts.map(p => p.id)) : new Set())}
-                        />
-                      </th>
-                      <th className="px-4 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16"></th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">SKU</th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Barcode</th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Condition</th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Fitments</th>
-                      <th className="px-6 py-5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</th>
-                      {isManager && <th className="px-6 py-5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50">
-                    {parts.map((part) => (
-                      <tr key={part.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => navigate(`/parts/${part.id}`)}>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <input type="checkbox" className="rounded border-slate-600"
-                            checked={selectedForPrint.has(part.id)}
-                            onChange={e => setSelectedForPrint(prev => { const n = new Set(prev); e.target.checked ? n.add(part.id) : n.delete(part.id); return n; })}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          {thumbnails.has(part.id) ? (
-                            <img
-                              src={api.getImageUrl(thumbnails.get(part.id)!)}
-                              alt=""
-                              className="w-12 h-12 object-cover rounded-lg border border-slate-700"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center">
-                              <ImageIcon className="w-5 h-5 text-slate-600" />
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-lg">{part.sku}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {part.barcodeData ? (
-                            <img
-                              src={`data:image/png;base64,${part.barcodeData}`}
-                              alt="Barcode"
-                              className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={(e) => { e.stopPropagation(); setBarcodeModal({ sku: part.sku, barcode: part.barcodeData! }); }}
-                            />
-                          ) : (
-                            <span className="text-xs text-slate-600">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-white font-medium">{part.name}</td>
-                        <td className="px-6 py-4">
-                          <ConditionBadge condition={part.condition || 'UNKNOWN'} />
-                        </td>
-                        <td className="px-6 py-4">
-                          {part.fitments && part.fitments.length > 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md">
-                              <Car className="w-3 h-3" /> {part.fitments.length}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-600">None</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-400">
-                          {part.interchangeMembers && part.interchangeMembers.length > 0
-                            ? part.interchangeMembers.map((m) => m.group?.name).join(', ')
-                            : <span className="text-xs text-slate-600">None</span>}
-                        </td>
-                        {isManager && (
-                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex gap-2 justify-end">
-                              <button onClick={() => { setSelectedPart(part); setShowFitmentModal(true); }} className="px-4 py-2.5 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Fitment</button>
-                              <button onClick={() => { setSelectedPart(part); setShowAddToGroupModal(true); }} className="px-4 py-2.5 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border whitespace-nowrap border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">+ Group</button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Parts Cards Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {parts.map((part) => (
+                  <PartCard
+                    key={part.id}
+                    part={part}
+                    onViewPart={(id) => navigate(`/parts/${id}`)}
+                    onShowBarcode={(sku, barcode) => setBarcodeModal({ sku, barcode })}
+                  />
+                ))}
               </div>
 
               {/* Pagination */}

@@ -14,6 +14,7 @@ import csvRoutes from './csv.routes.js';
 import solutionsRoutes from './solutions.routes.js';
 import alertsRoutes from './alerts.routes.js';
 import reportsRoutes from './reports.routes.js';
+import pricesRoutes from './prices.routes.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import * as interchangeController from '../controllers/interchange.controller.js';
 
@@ -39,6 +40,7 @@ router.use('/csv', csvRoutes);
 router.use('/solutions', solutionsRoutes);
 router.use('/alerts', alertsRoutes);
 router.use('/reports', reportsRoutes);
+router.use('/prices', pricesRoutes);
 
 // Additional utility route: get interchangeable parts for a specific part
 router.get(

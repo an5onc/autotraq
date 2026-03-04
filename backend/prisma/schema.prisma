@@ -70,17 +70,20 @@ enum Role {
 // ============================================
 
 model Part {
-  id          Int            @id @default(autoincrement())
-  sku         String         @unique
-  name        String
-  description String?        @db.Text
-  condition   PartCondition  @default(UNKNOWN)
-  minStock    Int            @default(1) @map("min_stock") // Low stock threshold
-  costCents   Int?           @map("cost_cents") // Cost per unit in cents (e.g., 1999 = $19.99)
-  barcodeData String?        @db.Text @map("barcode_data")
-  skuDecoded  String?        @db.Text @map("sku_decoded")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               Int            @id @default(autoincrement())
+  sku              String         @unique
+  name             String
+  description      String?        @db.Text
+  condition        PartCondition  @default(UNKNOWN)
+  minStock         Int            @default(1) @map("min_stock") // Low stock threshold
+  costCents        Int?           @map("cost_cents") // Cost per unit in cents (e.g., 1999 = $19.99)
+  isOem            Boolean        @default(false) @map("is_oem")
+  retailPriceCents Int?           @map("retail_price_cents")
+  partType         String?        @default("Aftermarket") @map("part_type") // OEM | Aftermarket | Remanufactured
+  barcodeData      String?        @db.Text @map("barcode_data")
+  skuDecoded       String?        @db.Text @map("sku_decoded")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   fitments           PartFitment[]
   interchangeMembers InterchangeGroupMember[]
@@ -187,6 +190,12 @@ model InterchangeGroupMember {
 model Location {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  address   String?
+  city      String?
+  state     String?  @default("CO")
+  zipCode   String?  @map("zip_code")
+  lat       Float?
+  lng       Float?
   createdAt DateTime @default(now())
 
   inventoryEvents InventoryEvent[]

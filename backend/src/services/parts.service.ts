@@ -2,6 +2,7 @@ import prisma from '../repositories/prisma.js';
 import { CreatePartInput, UpdatePartInput, PartsQuery } from '../schemas/parts.schema.js';
 import { generateBarcode } from './barcode.service.js';
 import { lookupSku } from './sku.service.js';
+import { haversineDistance, zipToCoords } from '../utils/distance.js';
 
 export async function createPart(input: CreatePartInput) {
   // Check if SKU already exists
@@ -38,8 +39,29 @@ export async function createPart(input: CreatePartInput) {
   });
 }
 
-export async function getParts(query: PartsQuery) {
-  const { search, condition, page, limit } = query;
+// Helper function to calculate stock by location for multiple parts
+async function calculateStockByLocation(partIds: number[]): Promise<Map<number, Map<number, number>>> {
+  if (partIds.length === 0) return new Map();
+
+  const results = await prisma.inventoryEvent.groupBy({
+    by: ['partId', 'locationId'],
+    where: { partId: { in: partIds } },
+    _sum: { qtyDelta: true },
+  });
+
+  const stockMap = new Map<number, Map<number, number>>();
+  for (const r of results) {
+    if (!stockMap.has(r.partId)) {
+      stockMap.set(r.partId, new Map());
+    }
+    const locationMap = stockMap.get(r.partId)!;
+    locationMap.set(r.locationId, r._sum.qtyDelta || 0);
+  }
+  return stockMap;
+}
+
+export async function getParts(query: PartsQuery & { zip?: string }) {
+  const { search, condition, page, limit, zip } = query;
   const skip = (page - 1) * limit;
 
   const conditionFilter = condition ? { condition } : {};
@@ -55,7 +77,7 @@ export async function getParts(query: PartsQuery) {
     } : {}),
   };
 
-  const [parts, total] = await Promise.all([
+  const [parts, total, locations] = await Promise.all([
     prisma.part.findMany({
       where,
       skip,
@@ -75,10 +97,70 @@ export async function getParts(query: PartsQuery) {
       },
     }),
     prisma.part.count({ where }),
+    prisma.location.findMany(),
   ]);
 
+  // Get stock by location for all parts
+  const partIds = parts.map(p => p.id);
+  const stockByLocation = await calculateStockByLocation(partIds);
+
+  // Get ZIP coordinates if provided
+  let zipCoords: { lat: number; lng: number } | null = null;
+  if (zip) {
+    zipCoords = await zipToCoords(zip);
+  }
+
+  // Enhance parts with stock by location and distance info
+  const enhancedParts = parts.map(part => {
+    const locationStock = stockByLocation.get(part.id) || new Map();
+    const stockLocations = [];
+    let totalStock = 0;
+
+    for (const location of locations) {
+      const qty = locationStock.get(location.id) || 0;
+      if (qty > 0) {
+        totalStock += qty;
+        const locationData: any = {
+          locationId: location.id,
+          locationName: location.name,
+          quantity: qty,
+          address: location.address,
+          city: location.city,
+          state: location.state,
+          zipCode: location.zipCode,
+        };
+
+        // Calculate distance if we have ZIP coordinates and location coordinates
+        if (zipCoords && location.lat && location.lng) {
+          locationData.distanceMiles = Math.round(haversineDistance(
+            zipCoords.lat,
+            zipCoords.lng,
+            location.lat,
+            location.lng
+          ) * 10) / 10; // Round to 1 decimal place
+        }
+
+        stockLocations.push(locationData);
+      }
+    }
+
+    // Sort locations by distance if available
+    if (zipCoords) {
+      stockLocations.sort((a, b) => (a.distanceMiles || 9999) - (b.distanceMiles || 9999));
+    }
+
+    return {
+      ...part,
+      retailPriceCents: part.retailPriceCents,
+      isOem: part.isOem,
+      partType: part.partType,
+      stockOnHand: totalStock,
+      stockLocations,
+    };
+  });
+
   return {
-    parts,
+    parts: enhancedParts,
     pagination: {
       page,
       limit,
@@ -89,35 +171,67 @@ export async function getParts(query: PartsQuery) {
 }
 
 export async function getPartById(id: number) {
-  const part = await prisma.part.findUnique({
-    where: { id },
-    include: {
-      fitments: {
-        include: {
-          vehicle: true,
+  const [part, locations] = await Promise.all([
+    prisma.part.findUnique({
+      where: { id },
+      include: {
+        fitments: {
+          include: {
+            vehicle: true,
+          },
         },
-      },
-      interchangeMembers: {
-        include: {
-          group: {
-            include: {
-              members: {
-                include: {
-                  part: true,
+        interchangeMembers: {
+          include: {
+            group: {
+              include: {
+                members: {
+                  include: {
+                    part: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.location.findMany(),
+  ]);
 
   if (!part) {
     throw new Error('Part not found');
   }
 
-  return part;
+  // Get stock by location for this part
+  const stockByLocation = await calculateStockByLocation([part.id]);
+  const locationStock = stockByLocation.get(part.id) || new Map();
+  const stockLocations = [];
+  let totalStock = 0;
+
+  for (const location of locations) {
+    const qty = locationStock.get(location.id) || 0;
+    if (qty > 0) {
+      totalStock += qty;
+      stockLocations.push({
+        locationId: location.id,
+        locationName: location.name,
+        quantity: qty,
+        address: location.address,
+        city: location.city,
+        state: location.state,
+        zipCode: location.zipCode,
+      });
+    }
+  }
+
+  return {
+    ...part,
+    retailPriceCents: part.retailPriceCents,
+    isOem: part.isOem,
+    partType: part.partType,
+    stockOnHand: totalStock,
+    stockLocations,
+  };
 }
 
 export async function updatePart(id: number, data: UpdatePartInput) {

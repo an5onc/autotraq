@@ -371,6 +371,92 @@ export function PartDetailPage() {
                 <span className="text-white">{part.costCents ? `$${(part.costCents / 100).toFixed(2)}` : '—'}</span>
               )}
             </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Retail Price</label>
+              {isManager ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-400">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-28 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                    value={part.retailPriceCents ? (part.retailPriceCents / 100).toFixed(2) : ''}
+                    placeholder="0.00"
+                    onChange={async (e) => {
+                      const dollars = parseFloat(e.target.value);
+                      const cents = isNaN(dollars) ? null : Math.round(dollars * 100);
+                      setSaving(true);
+                      try {
+                        await api.updatePartPricing(part.id, { retailPriceCents: cents || undefined });
+                        const updated = await api.getPartById(part.id);
+                        setPart(updated);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Failed to update');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    disabled={saving}
+                  />
+                </div>
+              ) : (
+                <span className="text-white font-semibold">{part.retailPriceCents ? `$${(part.retailPriceCents / 100).toFixed(2)}` : '—'}</span>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">OEM Part</label>
+              {isManager ? (
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-600"
+                  checked={part.isOem || false}
+                  onChange={async (e) => {
+                    setSaving(true);
+                    try {
+                      await api.updatePartPricing(part.id, { isOem: e.target.checked });
+                      const updated = await api.getPartById(part.id);
+                      setPart(updated);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to update');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                />
+              ) : (
+                <span className="text-white">{part.isOem ? 'Yes' : 'No'}</span>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Part Type</label>
+              {isManager ? (
+                <select
+                  className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  value={part.partType || 'Aftermarket'}
+                  onChange={async (e) => {
+                    setSaving(true);
+                    try {
+                      await api.updatePartPricing(part.id, { partType: e.target.value });
+                      const updated = await api.getPartById(part.id);
+                      setPart(updated);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to update');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                >
+                  <option value="OEM">OEM</option>
+                  <option value="Aftermarket">Aftermarket</option>
+                  <option value="Remanufactured">Remanufactured</option>
+                </select>
+              ) : (
+                <span className="text-white">{part.partType || 'Aftermarket'}</span>
+              )}
+            </div>
           </div>
         </div>
 

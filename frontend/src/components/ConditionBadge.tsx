@@ -7,7 +7,7 @@ interface ConditionBadgeProps {
 
 export function ConditionBadge({ condition, size = 'sm' }: ConditionBadgeProps) {
   const config = PART_CONDITIONS.find(c => c.value === condition) || PART_CONDITIONS[7]; // fallback to UNKNOWN
-  
+
   const colorClasses: Record<string, string> = {
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     green: 'bg-green-500/10 text-green-400 border-green-500/20',
@@ -19,15 +19,32 @@ export function ConditionBadge({ condition, size = 'sm' }: ConditionBadgeProps) 
     slate: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
   };
 
+  const indicatorColors: Record<string, string> = {
+    emerald: 'bg-emerald-500',
+    green: 'bg-green-500',
+    blue: 'bg-blue-500',
+    amber: 'bg-amber-500',
+    orange: 'bg-orange-500',
+    purple: 'bg-purple-500',
+    red: 'bg-red-500',
+    slate: 'bg-slate-500',
+  };
+
   const sizeClasses = {
     sm: 'text-[10px] px-2 py-0.5',
     md: 'text-xs px-2.5 py-1',
   };
 
+  const indicatorSizes = {
+    sm: 'w-1.5 h-1.5',
+    md: 'w-2 h-2',
+  };
+
   return (
-    <span 
-      className={`inline-flex items-center font-semibold uppercase tracking-wider rounded-full border ${colorClasses[config.color]} ${sizeClasses[size]}`}
+    <span
+      className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider rounded-full border ${colorClasses[config.color]} ${sizeClasses[size]}`}
     >
+      <span className={`${indicatorSizes[size]} ${indicatorColors[config.color]} rounded-full`}></span>
       {config.label}
     </span>
   );

@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
 import { SkeletonTable } from '../components/Skeleton';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, ImageIcon } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, ImageIcon, Info } from 'lucide-react';
 
 export function PartsPage() {
   const [searchParams] = useSearchParams();
@@ -30,6 +30,7 @@ export function PartsPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showGradeLegendModal, setShowGradeLegendModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
 
   // CSV Import state
@@ -480,6 +481,13 @@ export function PartsPage() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          <button
+            onClick={() => setShowGradeLegendModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-slate-400 hover:text-white hover:border-amber-500/50 transition-colors whitespace-nowrap"
+            title="View condition grade guide"
+          >
+            <Info className="w-4 h-4" /> Grade Guide
+          </button>
           <a
             href={api.getReportUrl('inventory')}
             target="_blank"
@@ -773,6 +781,85 @@ export function PartsPage() {
           >
             <Printer className="w-4 h-4" /> Print Barcode
           </button>
+        </div>
+      </Modal>}
+
+      {/* Grade Legend Modal */}
+      {showGradeLegendModal && <Modal title="Part Condition Grade Guide" onClose={() => setShowGradeLegendModal(false)}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400 mb-6">
+            Understanding part condition grades helps ensure you select the right parts for your needs.
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+              <span className="text-2xl mt-1">🟢</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="NEW" />
+                </div>
+                <p className="text-sm text-slate-300">Brand new, never installed. Factory sealed or equivalent.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+              <span className="text-2xl mt-1">🔵</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="EXCELLENT" />
+                </div>
+                <p className="text-sm text-slate-300">Like new condition with minimal wear. Fully tested and guaranteed.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+              <span className="text-2xl mt-1">🟡</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="GOOD" />
+                </div>
+                <p className="text-sm text-slate-300">Normal wear, fully functional. May have minor cosmetic imperfections.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <span className="text-2xl mt-1">🟠</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="FAIR" />
+                </div>
+                <p className="text-sm text-slate-300">Noticeable wear but still functional. May require minor service.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
+              <span className="text-2xl mt-1">🔴</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="POOR" />
+                </div>
+                <p className="text-sm text-slate-300">Heavy wear, may need attention or repairs before use.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+              <span className="text-2xl mt-1">⚪</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="CORE" />
+                </div>
+                <p className="text-sm text-slate-300">For rebuild/exchange programs. Must be rebuildable.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+              <span className="text-2xl mt-1">💀</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <ConditionBadge condition="SALVAGE" />
+                </div>
+                <p className="text-sm text-slate-300">For parts only. Not functional as-is, useful for components.</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-slate-800">
+            <p className="text-xs text-slate-500 italic">
+              All parts are inspected and graded by our team. Condition grades help you make informed decisions about quality vs. cost.
+            </p>
+          </div>
         </div>
       </Modal>}
 

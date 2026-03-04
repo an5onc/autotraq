@@ -126,6 +126,15 @@ export function PartCard({ part, onViewPart, onShowBarcode }: PartCardProps) {
           <Eye className="w-4 h-4" />
           View Part
         </button>
+        {isOutOfStock && (
+          <button
+            onClick={() => onViewPart(part.id)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium transition-colors"
+            title="Add stock to this part"
+          >
+            + Add Stock
+          </button>
+        )}
 
         {part.barcodeData && onShowBarcode && (
           <button

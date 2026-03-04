@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { ConditionBadge, ConditionSelect } from '../components/ConditionBadge';
 import { ImageGallery } from '../components/ImageGallery';
-import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle, Camera } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle, Camera, PackagePlus } from 'lucide-react';
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +36,12 @@ export function PartDetailPage() {
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
 
+  // Add Stock modal
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [locations, setLocations] = useState<{ id: number; name: string }[]>([]);
+  const [stockForm, setStockForm] = useState({ locationId: '', qty: 1, reason: '' });
+  const [stockSaving, setStockSaving] = useState(false);
+
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -46,7 +52,32 @@ export function PartDetailPage() {
   const inputCls = "w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors text-sm";
   const selectCls = inputCls;
 
-  useEffect(() => { loadPart(); loadImages(); }, [id]);
+  useEffect(() => { loadPart(); loadImages(); loadLocations(); }, [id]);
+
+  const loadLocations = async () => {
+    try {
+      const locs = await api.getLocations();
+      setLocations(locs);
+      if (locs.length > 0) setStockForm(f => ({ ...f, locationId: String(locs[0].id) }));
+    } catch {}
+  };
+
+  const handleAddStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !stockForm.locationId) return;
+    setStockSaving(true);
+    try {
+      await api.receiveStock(parseInt(id), parseInt(stockForm.locationId), stockForm.qty, stockForm.reason || undefined);
+      toast.success(`Added ${stockForm.qty} unit${stockForm.qty !== 1 ? 's' : ''} to inventory`);
+      setShowAddStockModal(false);
+      setStockForm(f => ({ ...f, qty: 1, reason: '' }));
+      loadPart();
+    } catch {
+      toast.error('Failed to add stock');
+    } finally {
+      setStockSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (editingField && editRef.current) editRef.current.focus();
@@ -273,6 +304,14 @@ export function PartDetailPage() {
               <span className="inline-flex px-2.5 py-1 mt-1 bg-amber-500/10 text-amber-400 text-xs font-mono font-semibold rounded-md">{part.sku}</span>
             </div>
           </div>
+          {isManager && (
+            <button
+              onClick={() => setShowAddStockModal(true)}
+              className="inline-flex items-center gap-2.5 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer shadow-lg shadow-emerald-500/20"
+            >
+              <PackagePlus className="w-4 h-4" /> Add Stock
+            </button>
+          )}
         </div>
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}<button onClick={() => setError('')} className="ml-2 text-red-300 hover:text-red-200">×</button></div>}
@@ -632,6 +671,68 @@ export function PartDetailPage() {
             <button onClick={() => setShowDeleteModal(true)} className="inline-flex items-center gap-3 px-6 py-3.5 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-xl text-sm whitespace-nowrap transition-colors cursor-pointer">
               <Trash2 className="w-4 h-4" /> Delete Part
             </button>
+          </div>
+        )}
+
+        {/* Add Stock Modal */}
+        {showAddStockModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddStockModal(false)}>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-7 py-5 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <PackagePlus className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Add Stock</h3>
+                    <p className="text-xs text-slate-500 font-mono">{part.sku}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowAddStockModal(false)} className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer"><X className="w-5 h-5" /></button>
+              </div>
+              <form onSubmit={handleAddStock} className="px-7 py-6 space-y-5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Warehouse</label>
+                  <select
+                    className={inputCls}
+                    value={stockForm.locationId}
+                    onChange={(e) => setStockForm(f => ({ ...f, locationId: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select warehouse...</option>
+                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Quantity to Add</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className={inputCls}
+                    value={stockForm.qty}
+                    onChange={(e) => setStockForm(f => ({ ...f, qty: parseInt(e.target.value) || 1 }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Reason <span className="text-slate-600 normal-case font-normal">(optional)</span></label>
+                  <input
+                    type="text"
+                    className={inputCls}
+                    value={stockForm.reason}
+                    onChange={(e) => setStockForm(f => ({ ...f, reason: e.target.value }))}
+                    placeholder="PO #12345, physical count, transfer..."
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setShowAddStockModal(false)} className="flex-1 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer">Cancel</button>
+                  <button type="submit" disabled={stockSaving} className="flex-1 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                    {stockSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+                    {stockSaving ? 'Adding...' : `Add ${stockForm.qty} Unit${stockForm.qty !== 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

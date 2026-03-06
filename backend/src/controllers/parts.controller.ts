@@ -170,3 +170,28 @@ export async function removeFitment(req: AuthenticatedRequest, res: Response) {
     serverError(res);
   }
 }
+
+export async function exportPartsCSV(req: AuthenticatedRequest, res: Response) {
+  try {
+    const parts = await partsService.getAllPartsForExport();
+    const header = ['SKU', 'Name', 'Description', 'Condition', 'Min Stock', 'Cost (cents)', 'On Hand', 'Created At'];
+    const rows = parts.map(p => [
+      `"${(p.sku || '').replace(/"/g, '""')}"`,
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${(p.description || '').replace(/"/g, '""')}"`,
+      `"${p.condition || ''}"`,
+      p.minStock,
+      p.costCents ?? '',
+      p.onHand,
+      new Date(p.createdAt).toISOString().slice(0, 10),
+    ]);
+    const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const filename = `autotraq-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Export CSV error:', err);
+    serverError(res);
+  }
+}

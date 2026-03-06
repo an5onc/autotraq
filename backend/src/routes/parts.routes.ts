@@ -19,6 +19,9 @@ router.use(authenticate);
 // POST /api/parts - Create part (manager+)
 router.post('/', requireManager, validateBody(createPartSchema), partsController.createPart);
 
+// GET /api/parts/export/csv - Export full inventory as CSV (manager+)
+router.get('/export/csv', requireManager, partsController.exportPartsCSV);
+
 // GET /api/parts - List/search parts (all authenticated users)
 router.get('/', validateQuery(partsQuerySchema), partsController.getParts);
 
@@ -52,3 +55,4 @@ router.delete(
 );
 
 export default router;
+// Already appended above — placeholder

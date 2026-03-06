@@ -330,3 +330,18 @@ export async function removeFitment(partId: number, vehicleId: number) {
     where: { partId_vehicleId: { partId, vehicleId } },
   });
 }
+
+export async function getAllPartsForExport() {
+  const parts = await prisma.part.findMany({
+    select: {
+      id: true, sku: true, name: true, description: true, condition: true,
+      minStock: true, costCents: true, createdAt: true,
+      inventoryEvents: { select: { quantity: true } },
+    },
+    orderBy: { sku: 'asc' },
+  });
+  return parts.map(p => ({
+    ...p,
+    onHand: p.inventoryEvents.reduce((sum: number, e: { quantity: number }) => sum + e.quantity, 0),
+  }));
+}

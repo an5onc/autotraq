@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api, LowStockAlert } from '../api/client';
-import { AlertTriangle, X, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { AlertTriangle, X, ChevronDown, ChevronUp, Package, Download } from 'lucide-react';
 
 export function LowStockAlertPanel() {
   const [alerts, setAlerts] = useState<LowStockAlert[]>([]);
@@ -27,6 +27,25 @@ export function LowStockAlertPanel() {
 
   // Only show top 5 in expanded view
   const shown = expanded ? visible.slice(0, 10) : [];
+
+  const exportLowStockCSV = () => {
+    const headers = ['SKU', 'Name', 'On Hand', 'Min Stock', 'Shortage'];
+    const rows = visible.map(a => [
+      a.sku,
+      `"${a.name.replace(/"/g, '""')}"`,
+      a.currentQty,
+      a.minStock,
+      Math.max(0, a.minStock - a.currentQty),
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `low-stock-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const dismissOne = (partId: number) => {
     api.dismissLowStockAlert(partId).catch(() => {});
@@ -66,6 +85,13 @@ export function LowStockAlertPanel() {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={exportLowStockCSV}
+            className="p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-slate-800 cursor-pointer"
+            title="Export low stock report as CSV"
+          >
+            <Download className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setExpanded(!expanded)}
             className="p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-slate-800 cursor-pointer"

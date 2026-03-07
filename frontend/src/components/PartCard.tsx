@@ -21,6 +21,7 @@ export function PartCard({ part, onViewPart, onShowBarcode }: PartCardProps) {
   };
 
   const isOutOfStock = !part.stockOnHand || part.stockOnHand === 0;
+  const isLowStock = !isOutOfStock && part.stockOnHand !== undefined && part.minStock !== undefined && part.stockOnHand <= part.minStock;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-colors">
@@ -83,6 +84,10 @@ export function PartCard({ part, onViewPart, onShowBarcode }: PartCardProps) {
       {isOutOfStock ? (
         <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
           <span className="text-red-400 font-semibold">Out of Stock</span>
+        </div>
+      ) : isLowStock ? (
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between">
+          <span className="text-amber-400 font-semibold text-sm">⚠ Low Stock — {part.stockOnHand} remaining (min: {part.minStock})</span>
         </div>
       ) : (
         <div className="mb-4 space-y-2">

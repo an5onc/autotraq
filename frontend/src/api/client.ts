@@ -569,6 +569,31 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Reorder Management
+  async getReorderSuggestions(lookbackDays?: number, leadTimeDays?: number) {
+    const params = new URLSearchParams();
+    if (lookbackDays) params.append('lookbackDays', lookbackDays.toString());
+    if (leadTimeDays) params.append('leadTimeDays', leadTimeDays.toString());
+    const query = params.toString() ? `?${params}` : '';
+    return this.request<ReorderResponse>(`/reorder/suggestions${query}`);
+  }
+
+  async getPartAnalytics(partId: number, lookbackDays?: number) {
+    const params = lookbackDays ? `?lookbackDays=${lookbackDays}` : '';
+    return this.request<{
+      part: Part;
+      analytics: {
+        lookbackDays: number;
+        totalReceived: number;
+        totalFulfilled: number;
+        avgDailyUsage: number;
+        avgDailyReceival: number;
+        eventCount: number;
+        dailyData: { [date: string]: { received: number; fulfilled: number; net: number } };
+      };
+    }>(`/reorder/analytics/${partId}${params}`);
+  }
 }
 
 // Types
@@ -860,6 +885,43 @@ export interface LowStockAlert {
     locationName: string;
     qty: number;
   }>;
+}
+
+// Reorder Types
+export interface ReorderSuggestion {
+  partId: number;
+  sku: string;
+  name: string;
+  condition: string;
+  currentStock: number;
+  minStock: number;
+  stockDifference: number;
+  avgDailyUsage: number;
+  suggestedReorderQty: number;
+  daysOfStockRemaining: number;
+  lastOrderDate: string | null;
+  daysSinceLastOrder: number | null;
+  costPerUnit: number;
+  totalReorderCost: number;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface ReorderSummary {
+  totalPartsNeedingReorder: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  totalReorderCost: number;
+  totalUnitsToOrder: number;
+}
+
+export interface ReorderResponse {
+  suggestions: ReorderSuggestion[];
+  summary: ReorderSummary;
+  lookbackDays: number;
+  leadTimeDays: number;
+  generatedAt: string;
 }
 
 export const api = new ApiClient();

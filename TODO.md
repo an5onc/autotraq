@@ -149,6 +149,7 @@
 - [ ] **Lot/serial tracking** — individual unit tracking
 - [ ] **Expiration dates** — for perishable items
 - [ ] **Cost layers** — FIFO/LIFO/Average costing
+- [x] **Reorder point automation** — smart reorder suggestions based on usage patterns ✅
 - [ ] **Purchase orders** — track incoming stock
 
 ### 4.5 API & Integration

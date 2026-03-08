@@ -16,6 +16,7 @@ import {
   Command,
   X,
   CornerDownLeft,
+  ShoppingCart,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -50,6 +51,7 @@ export function CommandBar({ isOpen, onClose }: CommandBarProps) {
     { id: 'nav-vehicles', type: 'page', title: 'Vehicles', subtitle: 'Vehicle database', icon: Car, action: () => navigate('/vehicles'), keywords: ['car', 'make', 'model'] },
     { id: 'nav-inventory', type: 'page', title: 'Inventory', subtitle: 'Stock levels & events', icon: Warehouse, action: () => navigate('/inventory'), keywords: ['stock', 'quantity'] },
     { id: 'nav-requests', type: 'page', title: 'Requests', subtitle: 'Part requests', icon: ClipboardList, action: () => navigate('/requests'), keywords: ['order', 'fulfill'] },
+    { id: 'nav-reorder', type: 'page', title: 'Reorder Management', subtitle: 'Smart reorder suggestions', icon: ShoppingCart, action: () => navigate('/reorder'), keywords: ['purchase', 'order', 'buy', 'stock'] },
     { id: 'nav-scan', type: 'page', title: 'Scan Barcode', subtitle: 'USB or camera scanner', icon: ScanLine, action: () => navigate('/scan'), keywords: ['barcode', 'qr'] },
   ];
 

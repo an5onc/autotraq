@@ -7,7 +7,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Search, ChevronDown, ChevronRight,
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
-  Sun, Moon, Monitor, History,
+  Sun, Moon, Monitor, History, ShoppingCart,
   FileSpreadsheet, Sparkles, Menu, X as XIcon,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
@@ -82,6 +82,11 @@ const baseNavItems: NavItem[] = [
       { label: 'All Requests', to: '/requests', icon: List },
       { label: 'New Request', to: '/requests?action=new', icon: Plus },
     ],
+  },
+  {
+    to: '/reorder',
+    icon: ShoppingCart,
+    label: 'Reorder',
   },
   {
     to: '/scan',

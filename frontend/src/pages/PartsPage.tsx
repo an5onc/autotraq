@@ -7,24 +7,37 @@ import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
 import { PartCard } from '../components/PartCard';
 import { SkeletonTable } from '../components/Skeleton';
-import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, Info, Filter, ChevronDown } from 'lucide-react';
 
 export function PartsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { isManager } = useAuth();
   const [parts, setParts] = useState<Part[]>([]);
   const [groups, setGroups] = useState<InterchangeGroup[]>([]);
+  const [locations, setLocations] = useState<{ id: number; name: string }[]>([]);
   const [thumbnails, setThumbnails] = useState<Map<number, number>>(new Map()); // partId → imageId
-  const [search, setSearch] = useState('');
-  const [conditionFilter, setConditionFilter] = useState('');
-  const [userZip, setUserZip] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+  const [conditionFilter, setConditionFilter] = useState(() => searchParams.get('condition') || '');
+  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || '');
+  const [locationFilter, setLocationFilter] = useState(() => searchParams.get('location') || '');
+  const [stockStatusFilter, setStockStatusFilter] = useState(() => searchParams.get('stockStatus') || '');
+  const [priceMin, setPriceMin] = useState(() => {
+    const val = searchParams.get('priceMin');
+    return val ? parseInt(val) : 0;
+  });
+  const [priceMax, setPriceMax] = useState(() => {
+    const val = searchParams.get('priceMax');
+    return val ? parseInt(val) : 10000;
+  });
+  const [userZip, setUserZip] = useState(() => searchParams.get('zip') || '');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const [showPartModal, setShowPartModal] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
@@ -145,23 +158,98 @@ export function PartsPage() {
     if (focus === 'search') searchInputRef.current?.focus();
   }, [searchParams]);
 
-  useEffect(() => { setPage(1); }, [search, conditionFilter, userZip]);
+  // Load locations on mount
+  useEffect(() => {
+    api.getLocations()
+      .then(locs => setLocations(locs.map(l => ({ id: l.id, name: l.name }))))
+      .catch(() => {});
+  }, []);
 
-  useEffect(() => { loadData(); }, [search, conditionFilter, page, userZip]);
+  // Update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (conditionFilter) params.set('condition', conditionFilter);
+    if (categoryFilter) params.set('category', categoryFilter);
+    if (locationFilter) params.set('location', locationFilter);
+    if (stockStatusFilter) params.set('stockStatus', stockStatusFilter);
+    if (priceMin > 0) params.set('priceMin', priceMin.toString());
+    if (priceMax < 10000) params.set('priceMax', priceMax.toString());
+    if (userZip) params.set('zip', userZip);
+    setSearchParams(params);
+  }, [search, conditionFilter, categoryFilter, locationFilter, stockStatusFilter, priceMin, priceMax, userZip, setSearchParams]);
+
+  const hasActiveFilters = () => {
+    return !!(search || conditionFilter || categoryFilter || locationFilter || stockStatusFilter || priceMin > 0 || priceMax < 10000 || userZip);
+  };
+
+  const clearAllFilters = () => {
+    setSearch('');
+    setConditionFilter('');
+    setCategoryFilter('');
+    setLocationFilter('');
+    setStockStatusFilter('');
+    setPriceMin(0);
+    setPriceMax(10000);
+    setUserZip('');
+    setPage(1);
+  };
+
+  // Filter parts locally by cost price and stock status
+  const filterPartsLocally = (partsList: Part[]): Part[] => {
+    return partsList.filter(part => {
+      // Price filter
+      const partCost = part.costCents ? Math.round(part.costCents) : 0;
+      if (partCost < priceMin || partCost > priceMax) return false;
+
+      // Stock status filter
+      if (stockStatusFilter) {
+        const onHand = part.stockOnHand || 0;
+        const minStock = part.minStock || 0;
+        switch (stockStatusFilter) {
+          case 'in-stock':
+            if (onHand <= 0) return false;
+            break;
+          case 'low-stock':
+            if (onHand <= 0 || onHand > minStock) return false;
+            break;
+          case 'out-of-stock':
+            if (onHand > 0) return false;
+            break;
+        }
+      }
+
+      // Location filter
+      if (locationFilter) {
+        const hasLocation = part.stockLocations?.some(loc => loc.locationId === parseInt(locationFilter));
+        if (!hasLocation) return false;
+      }
+
+      return true;
+    });
+  };
+
+  useEffect(() => { setPage(1); }, [search, conditionFilter, categoryFilter, locationFilter, stockStatusFilter, priceMin, priceMax, userZip]);
+
+  useEffect(() => { loadData(); }, [search, conditionFilter, categoryFilter, locationFilter, stockStatusFilter, priceMin, priceMax, page, userZip]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined, userZip || undefined), api.getInterchangeGroups()]);
-      setParts(partsData.parts);
+
+      // Apply local filters (price, stock status, location)
+      const filteredParts = filterPartsLocally(partsData.parts);
+
+      setParts(filteredParts);
       setTotalPages(partsData.pagination.totalPages);
       setTotal(partsData.pagination.total);
       setGroups(groupsData);
-      
+
       // Load thumbnails for these parts
-      if (partsData.parts.length > 0) {
+      if (filteredParts.length > 0) {
         try {
-          const partIds = partsData.parts.map(p => p.id);
+          const partIds = filteredParts.map(p => p.id);
           const images = await api.getPrimaryImages(partIds);
           const thumbMap = new Map<number, number>();
           images.forEach(img => thumbMap.set(img.partId, img.id));
@@ -456,23 +544,8 @@ export function PartsPage() {
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
-        {/* ZIP Code Search Bar */}
-        <div className="mb-6 p-4 bg-slate-900 border border-slate-800 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-slate-400 whitespace-nowrap">ZIP Code:</label>
-            <input
-              type="text"
-              placeholder="Enter ZIP code..."
-              value={userZip}
-              onChange={(e) => setUserZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              className="flex-1 max-w-xs px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
-            />
-            <span className="text-xs text-slate-500">Show nearest warehouse first</span>
-          </div>
-        </div>
-
-        {/* Search + Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        {/* Search Bar */}
+        <div className="flex flex-col gap-4 mb-6">
           <div className="relative flex-1">
             <input
               ref={searchInputRef}
@@ -488,31 +561,159 @@ export function PartsPage() {
               </button>
             )}
           </div>
-          <select
-            value={conditionFilter}
-            onChange={e => { setConditionFilter(e.target.value); setPage(1); }}
-            className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-white focus:outline-none focus:border-amber-500/50 min-w-[150px] cursor-pointer"
-          >
-            <option value="">All Conditions</option>
-            {['NEW','EXCELLENT','GOOD','FAIR','POOR','CORE','SALVAGE','UNKNOWN'].map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowGradeLegendModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-slate-400 hover:text-white hover:border-amber-500/50 transition-colors whitespace-nowrap"
-            title="View condition grade guide"
-          >
-            <Info className="w-4 h-4" /> Grade Guide
-          </button>
-          <a
-            href={api.getReportUrl('inventory')}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors whitespace-nowrap"
-          >
-            <FileText className="w-4 h-4" /> PDF Report
-          </a>
+
+          {/* Quick Filters + Advanced Toggle */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select
+              value={conditionFilter}
+              onChange={e => { setConditionFilter(e.target.value); setPage(1); }}
+              className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-white focus:outline-none focus:border-amber-500/50 min-w-[140px] cursor-pointer"
+            >
+              <option value="">All Conditions</option>
+              {['NEW','EXCELLENT','GOOD','FAIR','POOR','CORE','SALVAGE','UNKNOWN'].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap ${
+                showAdvancedFilters || hasActiveFilters()
+                  ? 'bg-amber-500/20 border border-amber-500/50 text-amber-400 hover:bg-amber-500/30'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              Advanced
+              <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+            </button>
+
+            <button
+              onClick={() => setShowGradeLegendModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm text-slate-400 hover:text-white hover:border-amber-500/50 transition-colors whitespace-nowrap"
+              title="View condition grade guide"
+            >
+              <Info className="w-4 h-4" /> Grade Guide
+            </button>
+
+            <a
+              href={api.getReportUrl('inventory')}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors whitespace-nowrap"
+            >
+              <FileText className="w-4 h-4" /> PDF Report
+            </a>
+          </div>
+
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 animate-fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Stock Status Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Stock Status</label>
+                  <select
+                    value={stockStatusFilter}
+                    onChange={(e) => { setStockStatusFilter(e.target.value); setPage(1); }}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 cursor-pointer"
+                  >
+                    <option value="">All</option>
+                    <option value="in-stock">In Stock</option>
+                    <option value="low-stock">Low Stock</option>
+                    <option value="out-of-stock">Out of Stock</option>
+                  </select>
+                </div>
+
+                {/* Location/Warehouse Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Warehouse</label>
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => { setLocationFilter(e.target.value); setPage(1); }}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 cursor-pointer"
+                  >
+                    <option value="">All Warehouses</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Brakes, Engine..."
+                    value={categoryFilter}
+                    onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+
+                {/* ZIP Code Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">ZIP Code</label>
+                  <input
+                    type="text"
+                    placeholder="Enter ZIP..."
+                    value={userZip}
+                    onChange={(e) => { setUserZip(e.target.value.replace(/\D/g, '').slice(0, 5)); setPage(1); }}
+                    maxLength={5}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+              </div>
+
+              {/* Price Range Slider */}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Cost Price Range</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-500 mb-1 block">Min: ${(priceMin / 100).toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10000"
+                        step="100"
+                        value={priceMin}
+                        onChange={(e) => { const val = parseInt(e.target.value); setPriceMin(Math.min(val, priceMax)); setPage(1); }}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-500 mb-1 block">Max: ${(priceMax / 100).toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10000"
+                        step="100"
+                        value={priceMax}
+                        onChange={(e) => { const val = parseInt(e.target.value); setPriceMax(Math.max(val, priceMin)); setPage(1); }}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              {hasActiveFilters() && (
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={clearAllFilters}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+                  >
+                    <X className="w-4 h-4" /> Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Parts Grid */}

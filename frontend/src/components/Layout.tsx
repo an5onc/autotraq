@@ -8,7 +8,7 @@ import {
   Plus, List, Usb, Camera, Truck, GitCompare, BarChart2, ArrowDownUp,
   Users, UserPlus, ShieldAlert, QrCode, LayoutDashboard, Command,
   Sun, Moon, Monitor, History, ShoppingCart,
-  FileSpreadsheet, Sparkles, Menu, X as XIcon,
+  FileSpreadsheet, Sparkles, Menu, X as XIcon, Zap,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -87,6 +87,11 @@ const baseNavItems: NavItem[] = [
     to: '/reorder',
     icon: ShoppingCart,
     label: 'Reorder',
+  },
+  {
+    to: '/maintenance',
+    icon: Zap,
+    label: 'Predictive Maintenance',
   },
   {
     to: '/scan',

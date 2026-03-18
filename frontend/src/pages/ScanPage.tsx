@@ -3,12 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api, SkuLookupResult, Part } from '../api/client';
 import { Layout } from '../components/Layout';
+import { BarcodeScanner } from '../components/BarcodeScanner';
 import { Camera, X, Printer, Usb, Zap, AlertCircle } from 'lucide-react';
 
 export function ScanPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [scanning, setScanning] = useState(false);
+  const [nativeScannerActive, setNativeScannerActive] = useState(false);
   const [manualSku, setManualSku] = useState('');
   const [result, setResult] = useState<SkuLookupResult | null>(null);
   const [_foundPart, setFoundPart] = useState<Part | null>(null);
@@ -27,9 +29,27 @@ export function ScanPage() {
   useEffect(() => {
     const mode = searchParams.get('mode');
     if (mode === 'usb') setUsbMode(true);
-    if (mode === 'camera') startScanner();
+    if (mode === 'camera') setNativeScannerActive(true);
+    if (mode === 'legacy') startScanner();
     if (mode === 'manual') manualInputRef.current?.focus();
   }, []);
+
+  // Handle native barcode scanner
+  const handleNativeScan = useCallback(async (barcode: string) => {
+    await lookupAndNavigate(barcode);
+  }, []);
+
+  const handleNativeScanError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+  }, []);
+
+  const toggleNativeScanner = useCallback(() => {
+    setNativeScannerActive((prev) => !prev);
+    // Stop the legacy scanner if it's running
+    if (!nativeScannerActive) {
+      stopScanner();
+    }
+  }, [nativeScannerActive]);
 
   const startScanner = async () => {
     setError('');
@@ -214,13 +234,27 @@ export function ScanPage() {
           </div>
         )}
 
-        {/* Camera Scanner */}
+        {/* Native Barcode Scanner (BarcodeDetector API) */}
+        <BarcodeScanner
+          onScan={handleNativeScan}
+          onError={handleNativeScanError}
+          isActive={nativeScannerActive}
+          onToggle={toggleNativeScanner}
+          supportedFormats={['ean_13', 'ean_8', 'code_128', 'qr_code']}
+        />
+
+        {/* Legacy Camera Scanner (html5-qrcode - fallback) */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-5">Camera Scanner</h3>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-1">Legacy QR Scanner</h3>
+              <p className="text-xs text-slate-600">Fallback option using html5-qrcode library</p>
+            </div>
+          </div>
           <div id="scanner-region" className={scanning ? 'mb-4' : 'hidden'} />
           {!scanning ? (
-            <button onClick={startScanner} className="flex items-center gap-3 w-full justify-center px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-xl transition-colors cursor-pointer text-sm">
-              <Camera className="w-5 h-5" /> Start Camera Scanner
+            <button onClick={startScanner} className="flex items-center gap-3 w-full justify-center px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold rounded-xl transition-colors cursor-pointer text-sm border border-slate-700">
+              <Camera className="w-5 h-5" /> Start Legacy Scanner
             </button>
           ) : (
             <button onClick={stopScanner} className="flex items-center gap-3 w-full justify-center px-6 py-4 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-colors cursor-pointer text-sm">

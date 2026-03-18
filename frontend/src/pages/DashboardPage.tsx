@@ -4,6 +4,7 @@ import { api, InventoryEvent, Part } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
 import { LowStockAlertPanel } from '../components/LowStockAlertPanel';
+import QuickActionsWidget from '../components/dashboard/QuickActionsWidget';
 import { 
   Package, 
   Warehouse, 
@@ -253,15 +254,9 @@ export function DashboardPage() {
           />
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions Widget */}
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Quick Actions</h2>
-          <div className="flex flex-wrap gap-3">
-            <QuickAction icon={ArrowDownToLine} label="Receive Stock" to="/inventory" />
-            <QuickAction icon={Plus} label="Add Part" to="/parts" />
-            <QuickAction icon={ScanLine} label="Scan Barcode" to="/scan" />
-            {isManager && <QuickAction icon={ClipboardList} label="View Requests" to="/requests" />}
-          </div>
+          <QuickActionsWidget />
         </div>
 
         {/* Inventory Chart */}

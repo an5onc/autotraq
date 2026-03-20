@@ -101,6 +101,7 @@ const baseNavItems: NavItem[] = [
       { label: 'Camera Scan', to: '/scan?mode=camera', icon: Camera },
       { label: 'USB Scanner', to: '/scan?mode=usb', icon: Usb },
       { label: 'SKU Lookup', to: '/scan?mode=manual', icon: Search },
+      { label: 'Scan Analytics', to: '/scan-analytics', icon: BarChart3 },
     ],
   },
 ];

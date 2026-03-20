@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import * as requestsService from '../services/requests.service.js';
+import * as scanHistoryService from '../services/scanHistory.service.js';
 import { CreateRequestInput, RequestsQuery } from '../schemas/requests.schema.js';
 import { success, created, validationError, notFound, serverError } from '../utils/response.js';
 
@@ -138,12 +139,47 @@ export async function scanFulfill(req: AuthenticatedRequest, res: Response) {
 
     const result = await requestsService.scanFulfill(sku, req.user.userId);
     if (!result) {
+      // Log failed scan
+      scanHistoryService.logScan({
+        sku,
+        userId: req.user.userId,
+        userName: req.user.name,
+        actionType: 'FULFILL',
+        success: false,
+        errorMsg: `No approved requests found containing part SKU: ${sku}`,
+      }).catch(err => console.error('Scan history log error:', err));
+
       notFound(res, `No approved requests found containing part SKU: ${sku}`);
       return;
     }
+
+    // Log successful scan
+    // Try to get the part ID from the result if available
+    const part = result.items?.find((item: any) => item.part?.sku === sku);
+    scanHistoryService.logScan({
+      sku,
+      userId: req.user.userId,
+      userName: req.user.name,
+      partId: part?.partId,
+      actionType: 'FULFILL',
+      success: true,
+      metadata: { requestId: result.id },
+    }).catch(err => console.error('Scan history log error:', err));
+
     success(res, result);
   } catch (err) {
     if (err instanceof Error) {
+      // Log failed scan on error
+      if (req.user) {
+        scanHistoryService.logScan({
+          sku: req.body.sku,
+          userId: req.user.userId,
+          userName: req.user.name,
+          actionType: 'FULFILL',
+          success: false,
+          errorMsg: err.message,
+        }).catch(logErr => console.error('Scan history log error:', logErr));
+      }
       validationError(res, err.message);
       return;
     }

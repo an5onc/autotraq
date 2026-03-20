@@ -594,6 +594,36 @@ class ApiClient {
       };
     }>(`/reorder/analytics/${partId}${params}`);
   }
+
+  // Scan History & Analytics
+  async logScan(data: { sku: string; partId?: number; actionType: ScanActionType; success?: boolean; errorMsg?: string; metadata?: Record<string, any> }) {
+    return this.request<ScanHistoryEntry>('/scan-history', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getScanHistory(query?: { startDate?: string; endDate?: string; userId?: number; actionType?: ScanActionType; limit?: number; offset?: number }) {
+    const params = new URLSearchParams();
+    if (query?.startDate) params.append('startDate', query.startDate);
+    if (query?.endDate) params.append('endDate', query.endDate);
+    if (query?.userId) params.append('userId', query.userId.toString());
+    if (query?.actionType) params.append('actionType', query.actionType);
+    if (query?.limit) params.append('limit', query.limit.toString());
+    if (query?.offset) params.append('offset', query.offset.toString());
+    const qs = params.toString();
+    return this.request<{ scans: ScanHistoryEntry[]; total: number }>(`/scan-history${qs ? '?' + qs : ''}`);
+  }
+
+  async getScanAnalytics(query?: { startDate?: string; endDate?: string; userId?: number; actionType?: ScanActionType }) {
+    const params = new URLSearchParams();
+    if (query?.startDate) params.append('startDate', query.startDate);
+    if (query?.endDate) params.append('endDate', query.endDate);
+    if (query?.userId) params.append('userId', query.userId.toString());
+    if (query?.actionType) params.append('actionType', query.actionType);
+    const qs = params.toString();
+    return this.request<ScanAnalytics>(`/scan-history/analytics${qs ? '?' + qs : ''}`);
+  }
 }
 
 // Types
@@ -922,6 +952,56 @@ export interface ReorderResponse {
   lookbackDays: number;
   leadTimeDays: number;
   generatedAt: string;
+}
+
+// Scan History Types
+export type ScanActionType = 'NAVIGATE' | 'FULFILL' | 'LOOKUP' | 'PRINT' | 'INVENTORY';
+
+export interface ScanHistoryEntry {
+  id: number;
+  sku: string;
+  userId: number;
+  userName: string;
+  partId?: number;
+  actionType: ScanActionType;
+  success: boolean;
+  errorMsg?: string;
+  metadata?: string;
+  scannedAt: string;
+  part?: {
+    id: number;
+    sku: string;
+    name: string;
+  };
+}
+
+export interface ScanAnalytics {
+  mostScannedParts: Array<{
+    part: {
+      id: number;
+      sku: string;
+      name: string;
+    } | undefined;
+    scanCount: number;
+  }>;
+  scanFrequency: Array<{
+    period: string;
+    count: number;
+  }>;
+  userActivity: Array<{
+    userId: number;
+    userName: string;
+    scanCount: number;
+  }>;
+  peakHours: Array<{
+    hour: number;
+    count: number;
+  }>;
+  actionBreakdown: Array<{
+    actionType: ScanActionType;
+    count: number;
+  }>;
+  recentScans: ScanHistoryEntry[];
 }
 
 export const api = new ApiClient();

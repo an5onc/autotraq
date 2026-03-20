@@ -20,6 +20,7 @@ import { WelcomePage } from './pages/WelcomePage';
 import { SolutionsPage } from './pages/SolutionsPage';
 import { ReorderPage } from './pages/ReorderPage';
 import { MaintenancePage } from './pages/MaintenancePage';
+import { ScanAnalyticsPage } from './pages/ScanAnalyticsPage';
 
 function App() {
   const { user, loading } = useAuth();
@@ -78,6 +79,7 @@ function App() {
         <Route path="/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
         <Route path="/solutions" element={<ProtectedRoute><SolutionsPage /></ProtectedRoute>} />
         <Route path="/reorder" element={<ProtectedRoute><ReorderPage /></ProtectedRoute>} />
+        <Route path="/scan-analytics" element={<ProtectedRoute><ScanAnalyticsPage /></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
         <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <WelcomePage />} />
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} replace />} />

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authenticate } from '../middleware/auth.middleware.js';
 import * as skuService from '../services/sku.service.js';
 import * as barcodeService from '../services/barcode.service.js';
+import * as scanHistoryService from '../services/scanHistory.service.js';
 import { success, validationError, notFound, serverError } from '../utils/response.js';
 
 const router = Router();
@@ -80,10 +81,33 @@ router.get('/lookup/:sku', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const decoded = await skuService.lookupSku(req.params.sku);
     if (!decoded) {
+      // Log failed scan
+      if (req.user) {
+        scanHistoryService.logScan({
+          sku: req.params.sku,
+          userId: req.user.userId,
+          userName: req.user.name,
+          actionType: 'LOOKUP',
+          success: false,
+          errorMsg: 'Could not decode SKU',
+        }).catch(err => console.error('Scan history log error:', err));
+      }
       notFound(res, 'Could not decode SKU');
       return;
     }
     const barcodePng = await barcodeService.generateBarcode(req.params.sku);
+
+    // Log successful scan
+    if (req.user) {
+      scanHistoryService.logScan({
+        sku: req.params.sku,
+        userId: req.user.userId,
+        userName: req.user.name,
+        actionType: 'LOOKUP',
+        success: true,
+      }).catch(err => console.error('Scan history log error:', err));
+    }
+
     success(res, { sku: req.params.sku, decoded, barcode_png_base64: barcodePng });
   } catch (err) {
     console.error('Lookup SKU error:', err);

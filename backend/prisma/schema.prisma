@@ -90,6 +90,7 @@ model Part {
   inventoryEvents    InventoryEvent[]
   requestItems       RequestItem[]
   images             PartImage[]
+  scanHistory        ScanHistory[]
 
   @@map("parts")
 }
@@ -379,4 +380,37 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================
+// Scan History (Barcode Scan Tracking)
+// ============================================
+
+model ScanHistory {
+  id         Int          @id @default(autoincrement())
+  sku        String       // The SKU or barcode scanned
+  userId     Int          @map("user_id")
+  userName   String       @map("user_name") // Denormalized for performance
+  partId     Int?         @map("part_id") // Reference to part if found
+  actionType ScanActionType @map("action_type") // What action was performed
+  success    Boolean      @default(true) // Whether the scan was successful
+  errorMsg   String?      @map("error_msg") @db.Text // Error message if scan failed
+  metadata   String?      @db.Text // Additional JSON metadata (device info, location, etc.)
+  scannedAt  DateTime     @default(now()) @map("scanned_at")
+
+  part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([partId])
+  @@index([scannedAt])
+  @@index([actionType])
+  @@map("scan_history")
+}
+
+enum ScanActionType {
+  NAVIGATE    // Scanned to navigate to part details
+  FULFILL     // Scanned to fulfill a request
+  LOOKUP      // Manual or barcode lookup
+  PRINT       // Generated/printed barcode
+  INVENTORY   // Inventory related scan
 }

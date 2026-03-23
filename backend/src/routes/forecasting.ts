@@ -27,6 +27,30 @@ router.get('/forecasts', authenticateToken, async (req, res) => {
   }
 });
 
+// Get parts at risk of stockout in next 30 days
+router.get('/stockout-risk', authenticateToken, async (req, res) => {
+  try {
+    const atRisk = await forecastingService.getStockoutRisk(30);
+
+    res.json({
+      success: true,
+      count: atRisk.length,
+      riskLevel: {
+        critical: atRisk.filter((p) => p.daysUntilStockout <= 7).length,
+        warning: atRisk.filter((p) => p.daysUntilStockout > 7 && p.daysUntilStockout <= 14).length,
+        moderate: atRisk.filter((p) => p.daysUntilStockout > 14 && p.daysUntilStockout <= 30).length
+      },
+      parts: atRisk
+    });
+  } catch (error) {
+    console.error('Error getting stockout risk:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get stockout risk analysis'
+    });
+  }
+});
+
 // Get reorder alerts
 router.get('/reorder-alerts', authenticateToken, async (req, res) => {
   try {
@@ -62,6 +86,42 @@ router.get('/seasonal-demand/:categoryId', authenticateToken, async (req, res) =
     res.status(500).json({
       success: false,
       message: 'Failed to get seasonal demand'
+    });
+  }
+});
+
+// Get all seasonal demand patterns (for dashboard)
+router.get('/seasonal-demand-all', authenticateToken, async (req, res) => {
+  try {
+    const patterns = await forecastingService.getAllSeasonalPatterns();
+
+    res.json({
+      success: true,
+      patterns
+    });
+  } catch (error) {
+    console.error('Error getting seasonal patterns:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get seasonal patterns'
+    });
+  }
+});
+
+// Get dashboard summary
+router.get('/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const summary = await forecastingService.getDashboardSummary();
+
+    res.json({
+      success: true,
+      summary
+    });
+  } catch (error) {
+    console.error('Error getting dashboard summary:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get dashboard summary'
     });
   }
 });

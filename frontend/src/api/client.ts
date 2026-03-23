@@ -595,6 +595,69 @@ class ApiClient {
     }>(`/reorder/analytics/${partId}${params}`);
   }
 
+  // Forecasting
+  async getForecasts(partId?: number) {
+    const params = partId ? `?partId=${partId}` : '';
+    return this.request<{
+      success: boolean;
+      count: number;
+      forecasts: ForecastResult[];
+    }>(`/forecasting/forecasts${params}`);
+  }
+
+  async getStockoutRisk() {
+    return this.request<{
+      success: boolean;
+      count: number;
+      riskLevel: { critical: number; warning: number; moderate: number };
+      parts: ForecastResult[];
+    }>('/forecasting/stockout-risk');
+  }
+
+  async getReorderAlerts() {
+    return this.request<{
+      success: boolean;
+      count: number;
+      alerts: ForecastResult[];
+    }>('/forecasting/reorder-alerts');
+  }
+
+  async getSeasonalDemand(categoryId: number) {
+    return this.request<{
+      success: boolean;
+      categoryId: number;
+      demand: Array<{ month: string; demand: number }>;
+    }>(`/forecasting/seasonal-demand/${categoryId}`);
+  }
+
+  async getAllSeasonalPatterns() {
+    return this.request<{
+      success: boolean;
+      patterns: Array<{
+        categoryId: number;
+        categoryName: string;
+        monthlyDemand: Array<{ month: string; demand: number }>;
+      }>;
+    }>('/forecasting/seasonal-demand-all');
+  }
+
+  async getForecastingDashboard() {
+    return this.request<{
+      success: boolean;
+      summary: {
+        totalParts: number;
+        criticalParts: number;
+        warningParts: number;
+        partsAtRisk30Days: number;
+        avgConfidence: number;
+        trendBreakdown: { increasing: number; stable: number; decreasing: number };
+        totalReorderQtyNeeded: number;
+        highestRiskParts: ForecastResult[];
+        estimatedStockoutValue: number;
+      };
+    }>('/forecasting/dashboard');
+  }
+
   // Scan History & Analytics
   async logScan(data: { sku: string; partId?: number; actionType: ScanActionType; success?: boolean; errorMsg?: string; metadata?: Record<string, any> }) {
     return this.request<ScanHistoryEntry>('/scan-history', {
@@ -915,6 +978,22 @@ export interface LowStockAlert {
     locationName: string;
     qty: number;
   }>;
+}
+
+// Forecasting Types
+export interface ForecastResult {
+  partId: number;
+  sku: string;
+  name: string;
+  currentStock: number;
+  averageDailySales: number;
+  daysUntilStockout: number;
+  reorderPoint: number;
+  reorderQuantity: number;
+  confidence: number;
+  trend: 'increasing' | 'stable' | 'decreasing';
+  seasonalFactor: number;
+  nextMonthForecast: number;
 }
 
 // Reorder Types

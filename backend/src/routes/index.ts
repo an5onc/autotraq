@@ -17,6 +17,7 @@ import reportsRoutes from './reports.routes.js';
 import pricesRoutes from './prices.routes.js';
 import reorderRoutes from './reorder.routes.js';
 import scanHistoryRoutes from './scanHistory.routes.js';
+import forecastingRoutes from './forecasting.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import * as interchangeController from '../controllers/interchange.controller.js';
 
@@ -45,6 +46,7 @@ router.use('/reports', reportsRoutes);
 router.use('/prices', pricesRoutes);
 router.use('/reorder', reorderRoutes);
 router.use('/scan-history', scanHistoryRoutes);
+router.use('/forecasting', forecastingRoutes);
 
 // Additional utility route: get interchangeable parts for a specific part
 router.get(

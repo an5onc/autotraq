@@ -288,6 +288,76 @@ export class ForecastingService {
   }
 
   /**
+   * Get parts at risk of stockout within specified days
+   */
+  async getStockoutRisk(days: number): Promise<ForecastResult[]> {
+    const forecasts = await this.generateForecasts();
+    return forecasts.filter(f => f.daysUntilStockout <= days).sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
+  }
+
+  /**
+   * Get all seasonal demand patterns for dashboard
+   */
+  async getAllSeasonalPatterns(): Promise<any[]> {
+    const categories = await prisma.category.findMany();
+    const patterns = [];
+
+    for (const category of categories) {
+      const demand = await this.getCategorySeasonalDemand(category.id);
+      patterns.push({
+        categoryId: category.id,
+        categoryName: category.name,
+        monthlyDemand: demand
+      });
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Get dashboard summary with key metrics
+   */
+  async getDashboardSummary(): Promise<any> {
+    const forecasts = await this.generateForecasts();
+    const critical = forecasts.filter(f => f.daysUntilStockout <= 7);
+    const warning = forecasts.filter(f => f.daysUntilStockout > 7 && f.daysUntilStockout <= 30);
+
+    // Calculate average trend
+    const increasing = forecasts.filter(f => f.trend === 'increasing').length;
+    const decreasing = forecasts.filter(f => f.trend === 'decreasing').length;
+    const stable = forecasts.filter(f => f.trend === 'stable').length;
+
+    // Calculate average confidence
+    const avgConfidence = forecasts.length > 0
+      ? forecasts.reduce((sum, f) => sum + f.confidence, 0) / forecasts.length
+      : 0;
+
+    // Get total items at risk in next 30 days
+    const atRisk30Days = forecasts.filter(f => f.daysUntilStockout <= 30).length;
+
+    // Total reorder quantity needed
+    const totalReorderQty = forecasts
+      .filter(f => f.currentStock <= f.reorderPoint)
+      .reduce((sum, f) => sum + f.reorderQuantity, 0);
+
+    return {
+      totalParts: forecasts.length,
+      criticalParts: critical.length,
+      warningParts: warning.length,
+      partsAtRisk30Days: atRisk30Days,
+      avgConfidence: Number(avgConfidence.toFixed(2)),
+      trendBreakdown: {
+        increasing,
+        stable,
+        decreasing
+      },
+      totalReorderQtyNeeded: totalReorderQty,
+      highestRiskParts: critical.slice(0, 5),
+      estimatedStockoutValue: critical.reduce((sum, f) => sum + (f.reorderQuantity * 50), 0) // Rough estimate
+    };
+  }
+
+  /**
    * Generate automated purchase orders based on forecasts
    */
   async generatePurchaseOrders(): Promise<any[]> {

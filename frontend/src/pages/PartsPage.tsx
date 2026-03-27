@@ -7,6 +7,7 @@ import { Layout } from '../components/Layout';
 import { ConditionBadge } from '../components/ConditionBadge';
 import { PartCard } from '../components/PartCard';
 import { SkeletonTable } from '../components/Skeleton';
+import { BarcodeGenerator } from '../components/BarcodeGenerator';
 import { Plus, Wrench, Link2, Car, X, Printer, ChevronLeft, ChevronRight, Download, Upload, FileText, AlertCircle, CheckCircle, Info, Filter, ChevronDown } from 'lucide-react';
 
 export function PartsPage() {
@@ -47,6 +48,7 @@ export function PartsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showGradeLegendModal, setShowGradeLegendModal] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
+  const [showBarcodeGenerator, setShowBarcodeGenerator] = useState(false);
 
   // CSV Import state
   interface ImportRow { sku: string; name: string; description?: string; condition?: string; minStock?: number; costCents?: number; valid: boolean; error?: string; }
@@ -485,33 +487,13 @@ export function PartsPage() {
           <div className="flex flex-wrap gap-3">
             {selectedForPrint.size > 0 && (
               <button
-                onClick={async () => {
-                  setPrintingLabels(true);
-                  try {
-                    const selected = parts.filter(p => selectedForPrint.has(p.id) && p.barcodeData);
-                    if (selected.length === 0) { toast.error('No barcodes available for selected parts'); return; }
-                    const win = window.open('', '_blank');
-                    if (!win) return;
-                    const labels = selected.map(p => `
-                      <div class="label">
-                        <img src="data:image/png;base64,${p.barcodeData}" />
-                        <div class="sku">${p.sku}</div>
-                        <div class="name">${p.name}</div>
-                      </div>`).join('');
-                    win.document.write(`<html><head><title>AutoTraq Labels</title><style>
-                      body{font-family:monospace;margin:0;padding:10px;background:#fff}
-                      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-                      .label{border:1px solid #ccc;padding:8px;text-align:center;page-break-inside:avoid}
-                      .label img{width:100%;max-height:50px;object-fit:contain}
-                      .sku{font-size:11px;font-weight:bold;margin-top:4px}
-                      .name{font-size:9px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-                      @media print{body{padding:0}.grid{gap:4px}}
-                    </style></head><body><div class="grid">${labels}</div></body></html>`);
-                    win.document.close();
-                    win.print();
-                  } finally {
-                    setPrintingLabels(false);
+                onClick={() => {
+                  const selected = parts.filter(p => selectedForPrint.has(p.id) && p.barcodeData);
+                  if (selected.length === 0) {
+                    toast.error('No barcodes available for selected parts');
+                    return;
                   }
+                  setShowBarcodeGenerator(true);
                 }}
                 disabled={printingLabels}
                 className="inline-flex items-center gap-2 px-6 py-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
@@ -1072,6 +1054,14 @@ export function PartsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Barcode Generator Modal */}
+      {showBarcodeGenerator && (
+        <BarcodeGenerator
+          parts={parts.filter(p => selectedForPrint.has(p.id) && p.barcodeData)}
+          onClose={() => setShowBarcodeGenerator(false)}
+        />
       )}
     </Layout>
   );

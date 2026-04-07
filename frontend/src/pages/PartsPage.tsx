@@ -197,13 +197,9 @@ export function PartsPage() {
     setPage(1);
   };
 
-  // Filter parts locally by cost price and stock status
+  // Filter parts locally by stock status and location (price is now filtered server-side)
   const filterPartsLocally = (partsList: Part[]): Part[] => {
     return partsList.filter(part => {
-      // Price filter
-      const partCost = part.costCents ? Math.round(part.costCents) : 0;
-      if (partCost < priceMin || partCost > priceMax) return false;
-
       // Stock status filter
       if (stockStatusFilter) {
         const onHand = part.stockOnHand || 0;
@@ -238,7 +234,9 @@ export function PartsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined, userZip || undefined), api.getInterchangeGroups()]);
+      const priceMinParam = priceMin > 0 ? priceMin : undefined;
+      const priceMaxParam = priceMax < 10000 ? priceMax : undefined;
+      const [partsData, groupsData] = await Promise.all([api.getParts(search, page, undefined, conditionFilter || undefined, userZip || undefined, priceMinParam, priceMaxParam), api.getInterchangeGroups()]);
 
       // Apply local filters (price, stock status, location)
       const filteredParts = filterPartsLocally(partsData.parts);
@@ -729,20 +727,76 @@ export function PartsPage() {
                   <p className="text-xs text-slate-500">
                     Page {page} of {totalPages} · {total.toLocaleString()} parts
                   </p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    {/* First page */}
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={page <= 1}
+                      title="First page"
+                      className="px-2.5 py-2 text-xs bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      «
+                    </button>
+                    {/* Jump back 10 */}
+                    {page > 10 && (
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 10))}
+                        title="Back 10 pages"
+                        className="px-2.5 py-2 text-xs bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
+                      >
+                        ‹10
+                      </button>
+                    )}
+                    {/* Prev */}
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page <= 1}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" /> Prev
                     </button>
+                    {/* Page number window (±2 around current) */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p >= Math.max(1, page - 2) && p <= Math.min(totalPages, page + 2))
+                      .map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`w-9 h-9 text-sm rounded-lg border transition-colors cursor-pointer ${
+                            p === page
+                              ? 'bg-amber-500 border-amber-500 text-white font-semibold'
+                              : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    {/* Next */}
                     <button
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       Next <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    {/* Jump forward 10 */}
+                    {page <= totalPages - 10 && (
+                      <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 10))}
+                        title="Forward 10 pages"
+                        className="px-2.5 py-2 text-xs bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
+                      >
+                        10›
+                      </button>
+                    )}
+                    {/* Last page */}
+                    <button
+                      onClick={() => setPage(totalPages)}
+                      disabled={page >= totalPages}
+                      title="Last page"
+                      className="px-2.5 py-2 text-xs bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      »
                     </button>
                   </div>
                 </div>

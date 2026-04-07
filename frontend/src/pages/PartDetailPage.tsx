@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api, Part, PartImage, InterchangeGroup } from '../api/client';
@@ -7,6 +7,65 @@ import { Layout } from '../components/Layout';
 import { ConditionBadge, ConditionSelect } from '../components/ConditionBadge';
 import { ImageGallery } from '../components/ImageGallery';
 import { ArrowLeft, Pencil, Trash2, Printer, Plus, X, BarChart3, Car, Link2, AlertTriangle, Camera, PackagePlus } from 'lucide-react';
+
+// Defined at module scope so React never sees a new component type between renders.
+// Placing it inside PartDetailPage would cause remount on every keystroke (cursor loss bug).
+interface EditableFieldProps {
+  field: string;
+  value: string;
+  label: string;
+  mono?: boolean;
+  editingField: string | null;
+  editValue: string;
+  saving: boolean;
+  isManager: boolean;
+  inputCls: string;
+  onChange: (val: string) => void;
+  onBlur: () => void;
+  onKeyDown: (e: ReactKeyboardEvent) => void;
+  onStartEdit: (field: string, value: string) => void;
+}
+
+function EditableField({ field, value, label, mono, editingField, editValue, saving, isManager, inputCls, onChange, onBlur, onKeyDown, onStartEdit }: EditableFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus when this field enters edit mode
+  useEffect(() => {
+    if (editingField === field && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingField, field]);
+
+  if (editingField === field) {
+    return (
+      <div>
+        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
+        <input
+          ref={inputRef}
+          className={inputCls}
+          value={editValue}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          disabled={saving}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`group ${isManager ? 'cursor-pointer' : ''}`}
+      onClick={() => onStartEdit(field, value)}
+    >
+      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
+      <div className="flex items-center gap-2">
+        <span className={`text-white ${mono ? 'font-mono' : ''}`}>{value || <span className="text-slate-600 italic">Not set</span>}</span>
+        {isManager && <Pencil className="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
+      </div>
+    </div>
+  );
+}
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +80,6 @@ export function PartDetailPage() {
   // Inline editing
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const editRef = useRef<HTMLInputElement>(null);
 
   // Fitment form
   const [showFitmentForm, setShowFitmentForm] = useState(false);
@@ -79,10 +137,6 @@ export function PartDetailPage() {
     }
   };
 
-  useEffect(() => {
-    if (editingField && editRef.current) editRef.current.focus();
-  }, [editingField]);
-
   const loadImages = async () => {
     if (!id) return;
     try {
@@ -139,7 +193,7 @@ export function PartDetailPage() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'Enter') saveEdit();
     if (e.key === 'Escape') setEditingField(null);
   };
@@ -236,36 +290,7 @@ export function PartDetailPage() {
     win.print();
   };
 
-  const EditableField = ({ field, value, label, mono }: { field: string; value: string; label: string; mono?: boolean }) => {
-    if (editingField === field) {
-      return (
-        <div>
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
-          <input
-            ref={editRef}
-            className={inputCls}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={saveEdit}
-            onKeyDown={handleKeyDown}
-            disabled={saving}
-          />
-        </div>
-      );
-    }
-    return (
-      <div
-        className={`group ${isManager ? 'cursor-pointer' : ''}`}
-        onClick={() => startEdit(field, value)}
-      >
-        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">{label}</label>
-        <div className="flex items-center gap-2">
-          <span className={`text-white ${mono ? 'font-mono' : ''}`}>{value || <span className="text-slate-600 italic">Not set</span>}</span>
-          {isManager && <Pencil className="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
-        </div>
-      </div>
-    );
-  };
+  // EditableField is defined at module scope above to prevent remount on each render.
 
   if (loading) {
     return (
@@ -320,10 +345,10 @@ export function PartDetailPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-            <EditableField field="name" value={part.name} label="Name" />
-            <EditableField field="description" value={part.description || ''} label="Description" />
+            <EditableField field="name" value={part.name} label="Name" editingField={editingField} editValue={editValue} saving={saving} isManager={isManager} inputCls={inputCls} onChange={setEditValue} onBlur={saveEdit} onKeyDown={handleKeyDown} onStartEdit={startEdit} />
+            <EditableField field="description" value={part.description || ''} label="Description" editingField={editingField} editValue={editValue} saving={saving} isManager={isManager} inputCls={inputCls} onChange={setEditValue} onBlur={saveEdit} onKeyDown={handleKeyDown} onStartEdit={startEdit} />
             {isManager ? (
-              <EditableField field="sku" value={part.sku} label="SKU" mono />
+              <EditableField field="sku" value={part.sku} label="SKU" mono editingField={editingField} editValue={editValue} saving={saving} isManager={isManager} inputCls={inputCls} onChange={setEditValue} onBlur={saveEdit} onKeyDown={handleKeyDown} onStartEdit={startEdit} />
             ) : (
               <div>
                 <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">SKU</label>

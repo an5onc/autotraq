@@ -240,22 +240,25 @@ export async function getOnHand(query: OnHandQuery) {
     _sum: { qtyDelta: true },
   });
 
-  // Enrich with part and location details
-  const results = await Promise.all(
-    events.map(async (e) => {
-      const [part, location] = await Promise.all([
-        prisma.part.findUnique({ where: { id: e.partId } }),
-        prisma.location.findUnique({ where: { id: e.locationId } }),
-      ]);
-      return {
-        partId: e.partId,
-        locationId: e.locationId,
-        part,
-        location,
-        quantity: e._sum.qtyDelta || 0,
-      };
-    })
-  );
+  // Batch fetch parts and locations to avoid N+1 queries
+  const partIds = [...new Set(events.map((e) => e.partId))];
+  const locationIds = [...new Set(events.map((e) => e.locationId))];
+
+  const [parts, locations] = await Promise.all([
+    prisma.part.findMany({ where: { id: { in: partIds } } }),
+    prisma.location.findMany({ where: { id: { in: locationIds } } }),
+  ]);
+
+  const partMap = new Map(parts.map((p) => [p.id, p]));
+  const locationMap = new Map(locations.map((l) => [l.id, l]));
+
+  const results = events.map((e) => ({
+    partId: e.partId,
+    locationId: e.locationId,
+    part: partMap.get(e.partId) || null,
+    location: locationMap.get(e.locationId) || null,
+    quantity: e._sum.qtyDelta || 0,
+  }));
 
   // Filter out zero quantities
   return results.filter((r) => r.quantity !== 0);

@@ -21,6 +21,7 @@ export const createPartSchema = z.object({
   condition: partConditionEnum.optional().default('UNKNOWN'),
   minStock: z.number().int().min(0).optional().default(5),
   costCents: z.number().int().min(0).optional().nullable(),
+  retailPriceCents: z.number().int().min(0).optional().nullable(),
 });
 
 export const addFitmentSchema = z.object({
@@ -32,6 +33,8 @@ export const partsQuerySchema = z.object({
   condition: partConditionEnum.optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(5000).optional().default(20),
+  priceMin: z.coerce.number().int().min(0).optional(),
+  priceMax: z.coerce.number().int().min(0).optional(),
 });
 
 export const idParamSchema = z.object({
@@ -50,6 +53,7 @@ export const updatePartSchema = z.object({
   condition: partConditionEnum.optional(),
   minStock: z.number().int().min(0).optional(),
   costCents: z.number().int().min(0).optional().nullable(),
+  retailPriceCents: z.number().int().min(0).optional().nullable(),
 });
 
 export type CreatePartInput = z.infer<typeof createPartSchema>;

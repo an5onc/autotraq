@@ -33,6 +33,7 @@ export async function createPart(input: CreatePartInput) {
       condition: input.condition,
       minStock: input.minStock,
       costCents: input.costCents,
+      retailPriceCents: input.retailPriceCents,
       barcodeData,
       skuDecoded,
     },
@@ -61,13 +62,26 @@ async function calculateStockByLocation(partIds: number[]): Promise<Map<number, 
 }
 
 export async function getParts(query: PartsQuery & { zip?: string }) {
-  const { search, condition, page, limit, zip } = query;
+  const { search, condition, page, limit, zip, priceMin, priceMax } = query;
   const skip = (page - 1) * limit;
 
   const conditionFilter = condition ? { condition } : {};
 
+  // Build price filter — only apply when caller explicitly passes bounds.
+  // Using gte/lte on a nullable column automatically excludes NULL rows in SQL.
+  const priceFilter: Record<string, unknown> =
+    priceMin !== undefined || priceMax !== undefined
+      ? {
+          costCents: {
+            ...(priceMin !== undefined ? { gte: priceMin } : {}),
+            ...(priceMax !== undefined ? { lte: priceMax } : {}),
+          },
+        }
+      : {};
+
   const where = {
     ...conditionFilter,
+    ...priceFilter,
     ...(search ? {
       OR: [
         { sku: { contains: search } },

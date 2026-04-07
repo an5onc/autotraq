@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { serverError } from '../utils/response.js';
+import { serverError, validationError } from '../utils/response.js';
 
 /**
  * Global error handler middleware
@@ -11,6 +11,12 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  // Handle malformed JSON from Express body parser
+  if (err instanceof SyntaxError && 'body' in err) {
+    validationError(res, 'Malformed JSON in request body');
+    return;
+  }
+
   // Log error with request context (per CLAUDE.md Section 6)
   console.error('Error:', {
     message: err.message,

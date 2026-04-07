@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireRole } from '../middleware/auth';
+import { authenticate, requireRoles } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -28,7 +28,7 @@ interface HealthMetrics {
 }
 
 // Get inventory health metrics
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticate, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -172,7 +172,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 });
 
 // Get parts needing attention
-router.get('/alerts', authenticateToken, async (req, res) => {
+router.get('/alerts', authenticate, async (req, res) => {
   try {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -240,7 +240,7 @@ router.get('/alerts', authenticateToken, async (req, res) => {
 });
 
 // Get health score history
-router.get('/history', authenticateToken, async (req, res) => {
+router.get('/history', authenticate, async (req, res) => {
   try {
     // Generate mock historical data (in production, this would come from stored metrics)
     const history = [];

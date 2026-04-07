@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, requireRoles } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -82,7 +82,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Create new supplier
-router.post('/', authenticate, authorize(['ADMIN', 'MANAGER']), async (req, res) => {
+router.post('/', authenticate, requireRoles('admin', 'manager'), async (req, res) => {
   try {
     const {
       name,
@@ -149,7 +149,7 @@ router.post('/', authenticate, authorize(['ADMIN', 'MANAGER']), async (req, res)
 });
 
 // Update supplier
-router.put('/:id', authenticate, authorize(['ADMIN', 'MANAGER']), async (req, res) => {
+router.put('/:id', authenticate, requireRoles('admin', 'manager'), async (req, res) => {
   try {
     const supplierId = parseInt(req.params.id);
     const updateData = { ...req.body };
@@ -173,7 +173,7 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MANAGER']), async (req, re
 });
 
 // Delete supplier (soft delete)
-router.delete('/:id', authenticate, authorize(['ADMIN']), async (req, res) => {
+router.delete('/:id', authenticate, requireRoles('admin'), async (req, res) => {
   try {
     const supplierId = parseInt(req.params.id);
 
@@ -304,7 +304,7 @@ router.get('/:id/performance', authenticate, async (req, res) => {
 });
 
 // Create purchase order for supplier
-router.post('/:id/purchase-orders', authenticate, authorize(['ADMIN', 'MANAGER']), async (req, res) => {
+router.post('/:id/purchase-orders', authenticate, requireRoles('admin', 'manager'), async (req, res) => {
   try {
     const supplierId = parseInt(req.params.id);
     const {

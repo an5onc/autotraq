@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { checkRole } from '../middleware/roles';
+import { authenticate, requireRoles } from '../middleware/auth.middleware';
 import forecastingService from '../services/forecasting';
 
 const router = Router();
 
 // Get forecasts for all parts
-router.get('/forecasts', authenticateToken, async (req, res) => {
+router.get('/forecasts', authenticate, async (req, res) => {
   try {
     const { partId } = req.query;
     const forecasts = await forecastingService.generateForecasts(
@@ -28,7 +27,7 @@ router.get('/forecasts', authenticateToken, async (req, res) => {
 });
 
 // Get parts at risk of stockout in next 30 days
-router.get('/stockout-risk', authenticateToken, async (req, res) => {
+router.get('/stockout-risk', authenticate, async (req, res) => {
   try {
     const atRisk = await forecastingService.getStockoutRisk(30);
 
@@ -52,7 +51,7 @@ router.get('/stockout-risk', authenticateToken, async (req, res) => {
 });
 
 // Get reorder alerts
-router.get('/reorder-alerts', authenticateToken, async (req, res) => {
+router.get('/reorder-alerts', authenticate, async (req, res) => {
   try {
     const alerts = await forecastingService.getReorderAlerts();
 
@@ -71,7 +70,7 @@ router.get('/reorder-alerts', authenticateToken, async (req, res) => {
 });
 
 // Get seasonal demand for a category
-router.get('/seasonal-demand/:categoryId', authenticateToken, async (req, res) => {
+router.get('/seasonal-demand/:categoryId', authenticate, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.categoryId);
     const demand = await forecastingService.getCategorySeasonalDemand(categoryId);
@@ -91,7 +90,7 @@ router.get('/seasonal-demand/:categoryId', authenticateToken, async (req, res) =
 });
 
 // Get all seasonal demand patterns (for dashboard)
-router.get('/seasonal-demand-all', authenticateToken, async (req, res) => {
+router.get('/seasonal-demand-all', authenticate, async (req, res) => {
   try {
     const patterns = await forecastingService.getAllSeasonalPatterns();
 
@@ -109,7 +108,7 @@ router.get('/seasonal-demand-all', authenticateToken, async (req, res) => {
 });
 
 // Get dashboard summary
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticate, async (req, res) => {
   try {
     const summary = await forecastingService.getDashboardSummary();
 
@@ -129,8 +128,8 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 // Generate purchase orders (Manager/Admin only)
 router.post(
   '/generate-orders',
-  authenticateToken,
-  checkRole(['MANAGER', 'ADMIN']),
+  authenticate,
+  requireRoles('admin', 'manager'),
   async (req, res) => {
     try {
       const orders = await forecastingService.generatePurchaseOrders();

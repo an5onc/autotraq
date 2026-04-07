@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authMiddleware } from '../middleware/auth';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Check part compatibility with vehicle
-router.post('/check', authMiddleware, async (req: Request, res: Response) => {
+router.post('/check', authenticate, async (req: Request, res: Response) => {
   try {
     const { partId, vehicleId, vin, make, model, year } = req.body;
 
@@ -82,7 +82,7 @@ router.post('/check', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // Get all compatible parts for a vehicle
-router.get('/vehicle/:vehicleId/parts', authMiddleware, async (req: Request, res: Response) => {
+router.get('/vehicle/:vehicleId/parts', authenticate, async (req: Request, res: Response) => {
   try {
     const { vehicleId } = req.params;
     const { category } = req.query;
@@ -152,7 +152,7 @@ router.get('/vehicle/:vehicleId/parts', authMiddleware, async (req: Request, res
 });
 
 // Cross-reference parts (find interchangeable parts)
-router.get('/cross-reference/:sku', authMiddleware, async (req: Request, res: Response) => {
+router.get('/cross-reference/:sku', authenticate, async (req: Request, res: Response) => {
   try {
     const { sku } = req.params;
 

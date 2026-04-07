@@ -146,13 +146,15 @@ class ApiClient {
   }
 
   // Parts
-  async getParts(search?: string, page?: number, limit?: number, condition?: string, zip?: string) {
+  async getParts(search?: string, page?: number, limit?: number, condition?: string, zip?: string, priceMin?: number, priceMax?: number) {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (page) p.set('page', String(page));
     if (limit) p.set('limit', String(limit));
     if (condition) p.set('condition', condition);
     if (zip) p.set('zip', zip);
+    if (priceMin !== undefined && priceMin > 0) p.set('priceMin', String(priceMin));
+    if (priceMax !== undefined && priceMax < 10000) p.set('priceMax', String(priceMax));
     const qs = p.toString();
     return this.request<{ parts: Part[]; pagination: Pagination }>(`/parts${qs ? '?' + qs : ''}`);
   }

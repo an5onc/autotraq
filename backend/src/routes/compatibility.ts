@@ -1,16 +1,16 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Check part compatibility with vehicle
-router.post('/check', authenticate, async (req: Request, res: Response) => {
+router.post('/check', authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const { partId, vehicleId, vin, make, model, year } = req.body;
+    const { partId, vehicleId, make, model, year } = req.body;
 
-    // Get part details
     const part = await prisma.part.findUnique({
       where: { id: partId },
       include: { fitments: true }
@@ -20,43 +20,31 @@ router.post('/check', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Part not found' });
     }
 
-    // Check compatibility
-    let isCompatible = false;
-    let compatibilityDetails = {};
+    const universalFit = part.fitments.length === 0;
+    let isCompatible = universalFit;
+    let compatibilityDetails: Record<string, unknown> = {};
 
     if (vehicleId) {
-      // Check by vehicle ID
-      const vehicle = await prisma.vehicle.findUnique({
-        where: { id: vehicleId }
-      });
-
+      const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
       if (vehicle) {
-        isCompatible = checkVehicleCompatibility(part, vehicle);
+        isCompatible = universalFit || part.fitments.some(f => f.vehicleId === vehicle.id);
         compatibilityDetails = {
           vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-          trim: vehicle.trim,
-          engine: vehicle.engine
+          trim: vehicle.trim
         };
       }
     } else if (make && model && year) {
-      // Check by make/model/year
-      isCompatible = part.fitments.some(fitment =>
-        fitment.make === make &&
-        fitment.model === model &&
-        fitment.yearStart <= year &&
-        fitment.yearEnd >= year
-      );
-
+      const vehicle = await prisma.vehicle.findFirst({
+        where: { make, model, year: parseInt(year) }
+      });
+      if (vehicle) {
+        isCompatible = universalFit || part.fitments.some(f => f.vehicleId === vehicle.id);
+      }
       compatibilityDetails = {
         vehicle: `${year} ${make} ${model}`,
         directMatch: isCompatible
       };
     }
-
-    // Find alternative parts if not compatible
-    const alternatives = !isCompatible
-      ? await findAlternativeParts(part, { make, model, year })
-      : [];
 
     res.json({
       partId: part.id,
@@ -64,15 +52,9 @@ router.post('/check', authenticate, async (req: Request, res: Response) => {
       sku: part.sku,
       isCompatible,
       compatibilityDetails,
-      alternatives: alternatives.map(alt => ({
-        id: alt.id,
-        sku: alt.sku,
-        name: alt.name,
-        price: alt.retailPrice,
-        inStock: alt.quantity > 0
-      })),
-      universalFit: part.fitments.length === 0,
-      notes: generateCompatibilityNotes(part, isCompatible)
+      alternatives: [],
+      universalFit,
+      notes: generateCompatibilityNotes(universalFit, isCompatible)
     });
 
   } catch (error) {
@@ -82,67 +64,35 @@ router.post('/check', authenticate, async (req: Request, res: Response) => {
 });
 
 // Get all compatible parts for a vehicle
-router.get('/vehicle/:vehicleId/parts', authenticate, async (req: Request, res: Response) => {
+router.get('/vehicle/:vehicleId/parts', authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const { vehicleId } = req.params;
-    const { category } = req.query;
+    const vehicleId = parseInt(req.params.vehicleId);
 
-    const vehicle = await prisma.vehicle.findUnique({
-      where: { id: vehicleId }
-    });
-
+    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
     if (!vehicle) {
       return res.status(404).json({ error: 'Vehicle not found' });
     }
 
-    // Find all compatible parts
     const compatibleParts = await prisma.part.findMany({
       where: {
-        ...(category && { category: String(category) }),
         OR: [
-          // Universal parts
           { fitments: { none: {} } },
-          // Specific fitments
-          {
-            fitments: {
-              some: {
-                make: vehicle.make,
-                model: vehicle.model,
-                yearStart: { lte: vehicle.year },
-                yearEnd: { gte: vehicle.year }
-              }
-            }
-          }
+          { fitments: { some: { vehicleId } } }
         ]
       },
-      include: {
-        fitments: true
-      }
-    });
-
-    // Group by category
-    const partsByCategory: { [key: string]: any[] } = {};
-
-    compatibleParts.forEach(part => {
-      const cat = part.category || 'Other';
-      if (!partsByCategory[cat]) {
-        partsByCategory[cat] = [];
-      }
-      partsByCategory[cat].push({
-        id: part.id,
-        sku: part.sku,
-        name: part.name,
-        price: part.retailPrice,
-        inStock: part.quantity > 0,
-        quantity: part.quantity
-      });
+      include: { fitments: true }
     });
 
     res.json({
       vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       totalParts: compatibleParts.length,
-      categories: Object.keys(partsByCategory),
-      partsByCategory
+      parts: compatibleParts.map(p => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        retailPriceCents: p.retailPriceCents,
+        universalFit: p.fitments.length === 0
+      }))
     });
 
   } catch (error) {
@@ -152,64 +102,44 @@ router.get('/vehicle/:vehicleId/parts', authenticate, async (req: Request, res: 
 });
 
 // Cross-reference parts (find interchangeable parts)
-router.get('/cross-reference/:sku', authenticate, async (req: Request, res: Response) => {
+router.get('/cross-reference/:sku', authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { sku } = req.params;
 
     const part = await prisma.part.findUnique({
       where: { sku },
-      include: { interchangeGroup: true }
+      include: {
+        interchangeMembers: { include: { group: true } }
+      }
     });
 
     if (!part) {
       return res.status(404).json({ error: 'Part not found' });
     }
 
-    // Find interchangeable parts
-    let interchangeableParts: any[] = [];
+    let interchangeableParts: { id: number; sku: string; name: string; retailPriceCents: number | null }[] = [];
 
-    if (part.interchangeGroupId) {
-      interchangeableParts = await prisma.part.findMany({
+    const groupIds = part.interchangeMembers.map(m => m.groupId);
+    if (groupIds.length > 0) {
+      const members = await prisma.interchangeGroupMember.findMany({
         where: {
-          interchangeGroupId: part.interchangeGroupId,
-          id: { not: part.id }
-        }
+          groupId: { in: groupIds },
+          partId: { not: part.id }
+        },
+        include: { part: true }
       });
+      interchangeableParts = members.map(m => ({
+        id: m.part.id,
+        sku: m.part.sku,
+        name: m.part.name,
+        retailPriceCents: m.part.retailPriceCents
+      }));
     }
 
-    // Also find parts with similar specs (mock logic)
-    const similarParts = await prisma.part.findMany({
-      where: {
-        category: part.category,
-        id: { not: part.id },
-        // Would add more specific criteria in production
-      },
-      take: 5
-    });
-
     res.json({
-      originalPart: {
-        id: part.id,
-        sku: part.sku,
-        name: part.name,
-        manufacturer: part.manufacturer
-      },
-      directInterchange: interchangeableParts.map(p => ({
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        manufacturer: p.manufacturer,
-        price: p.retailPrice,
-        inStock: p.quantity > 0
-      })),
-      similarParts: similarParts.map(p => ({
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        manufacturer: p.manufacturer,
-        price: p.retailPrice,
-        matchConfidence: calculateMatchConfidence(part, p)
-      }))
+      originalPart: { id: part.id, sku: part.sku, name: part.name },
+      directInterchange: interchangeableParts,
+      similarParts: []
     });
 
   } catch (error) {
@@ -218,98 +148,16 @@ router.get('/cross-reference/:sku', authenticate, async (req: Request, res: Resp
   }
 });
 
-// Helper functions
-function checkVehicleCompatibility(part: any, vehicle: any): boolean {
-  if (part.fitments.length === 0) {
-    return true; // Universal part
-  }
-
-  return part.fitments.some((fitment: any) =>
-    fitment.make === vehicle.make &&
-    fitment.model === vehicle.model &&
-    fitment.yearStart <= vehicle.year &&
-    fitment.yearEnd >= vehicle.year
-  );
-}
-
-async function findAlternativeParts(originalPart: any, vehicleInfo: any): Promise<any[]> {
-  // Mock implementation - would query for similar parts
-  return [];
-}
-
-function generateCompatibilityNotes(part: any, isCompatible: boolean): string[] {
+function generateCompatibilityNotes(universalFit: boolean, isCompatible: boolean): string[] {
   const notes: string[] = [];
-
-  if (part.fitments.length === 0) {
+  if (universalFit) {
     notes.push('Universal fit part - compatible with most vehicles');
   }
-
   if (!isCompatible) {
     notes.push('This part may not be compatible with your vehicle');
     notes.push('Please verify fitment before purchasing');
   }
-
-  if (part.notes) {
-    notes.push(part.notes);
-  }
-
   return notes;
-}
-
-function calculateMatchConfidence(part1: any, part2: any): number {
-  let confidence = 0;
-
-  // Same category
-  if (part1.category === part2.category) confidence += 40;
-
-  // Same manufacturer
-  if (part1.manufacturer === part2.manufacturer) confidence += 30;
-
-  // Similar name
-  if (part1.name && part2.name) {
-    const nameSimilarity = calculateStringSimilarity(part1.name, part2.name);
-    confidence += nameSimilarity * 30;
-  }
-
-  return Math.min(confidence, 95);
-}
-
-function calculateStringSimilarity(str1: string, str2: string): number {
-  const longer = str1.length > str2.length ? str1 : str2;
-  const shorter = str1.length > str2.length ? str2 : str1;
-
-  if (longer.length === 0) return 1.0;
-
-  const distance = levenshteinDistance(longer, shorter);
-  return (longer.length - distance) / longer.length;
-}
-
-function levenshteinDistance(str1: string, str2: string): number {
-  const matrix: number[][] = [];
-
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-
-  return matrix[str2.length][str1.length];
 }
 
 export default router;

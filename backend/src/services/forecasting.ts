@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, InventoryEventType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -22,13 +22,22 @@ interface SeasonalPattern {
   factor: number;
 }
 
+// Part with computed stock quantity
+interface PartWithStock {
+  id: number;
+  sku: string;
+  name: string;
+  minStock: number;
+  computedQuantity: number;
+}
+
 export class ForecastingService {
-  private readonly LEAD_TIME_DAYS = 7; // Average supplier lead time
-  private readonly SAFETY_STOCK_DAYS = 5; // Buffer stock
-  private readonly MIN_CONFIDENCE = 0.5; // Minimum confidence threshold
+  private readonly LEAD_TIME_DAYS = 7;
+  private readonly SAFETY_STOCK_DAYS = 5;
+  private readonly MIN_CONFIDENCE = 0.5;
 
   /**
-   * Generate forecasts for all parts or specific part
+   * Generate forecasts for all parts or a specific part
    */
   async generateForecasts(partId?: number): Promise<ForecastResult[]> {
     const parts = await this.getPartsToForecast(partId);
@@ -45,63 +54,54 @@ export class ForecastingService {
   }
 
   /**
-   * Forecast for a single part
+   * Forecast for a single part using InventoryEvent history
    */
-  private async forecastPart(part: any): Promise<ForecastResult | null> {
-    // Get historical sales data (last 90 days)
+  private async forecastPart(part: PartWithStock): Promise<ForecastResult | null> {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
 
-    const salesHistory = await prisma.historyLog.findMany({
+    // Use FULFILL events as proxy for outbound/sales activity
+    const fulfillEvents = await prisma.inventoryEvent.findMany({
       where: {
         partId: part.id,
-        changeType: 'SALE',
-        createdAt: {
-          gte: startDate,
-          lte: endDate
-        }
+        type: InventoryEventType.FULFILL,
+        createdAt: { gte: startDate, lte: endDate }
       },
       orderBy: { createdAt: 'asc' }
     });
 
-    if (salesHistory.length < 5) {
-      // Not enough data for reliable forecast
-      return null;
+    if (fulfillEvents.length < 5) {
+      return null; // Not enough data
     }
 
-    // Calculate daily sales statistics
-    const dailySales = this.aggregateDailySales(salesHistory);
+    const dailySales = this.aggregateDailySales(fulfillEvents);
     const averageDailySales = this.calculateAverage(dailySales);
     const trend = this.calculateTrend(dailySales);
-    const seasonalFactor = this.calculateSeasonalFactor(salesHistory);
+    const seasonalFactor = this.calculateSeasonalFactor();
 
-    // Calculate forecast metrics
     const adjustedDailySales = averageDailySales * seasonalFactor;
-    const daysUntilStockout = part.quantity > 0
-      ? Math.floor(part.quantity / adjustedDailySales)
-      : 0;
+    const daysUntilStockout = part.computedQuantity > 0 && adjustedDailySales > 0
+      ? Math.floor(part.computedQuantity / adjustedDailySales)
+      : part.computedQuantity > 0 ? 999 : 0;
 
-    // Calculate reorder point and quantity
     const reorderPoint = Math.ceil(
       adjustedDailySales * (this.LEAD_TIME_DAYS + this.SAFETY_STOCK_DAYS)
     );
 
-    const reorderQuantity = Math.ceil(
-      adjustedDailySales * 30 // Order 30 days worth
+    const reorderQuantity = Math.max(
+      Math.ceil(adjustedDailySales * 30),
+      part.minStock
     );
 
-    // Calculate confidence based on data consistency
     const confidence = this.calculateConfidence(dailySales);
-
-    // Next month forecast
     const nextMonthForecast = Math.round(adjustedDailySales * 30);
 
     return {
       partId: part.id,
       sku: part.sku,
       name: part.name,
-      currentStock: part.quantity,
+      currentStock: part.computedQuantity,
       averageDailySales: Number(averageDailySales.toFixed(2)),
       daysUntilStockout,
       reorderPoint,
@@ -114,37 +114,41 @@ export class ForecastingService {
   }
 
   /**
-   * Get parts that need forecasting
+   * Get parts with their computed stock quantities
    */
-  private async getPartsToForecast(partId?: number) {
+  private async getPartsToForecast(partId?: number): Promise<PartWithStock[]> {
     const where = partId ? { id: partId } : {};
 
-    return await prisma.part.findMany({
-      where: {
-        ...where,
-        quantity: { gt: 0 } // Only forecast parts we have in stock
-      },
-      include: {
-        category: true
-      }
-    });
+    const [parts, stockAggregates] = await Promise.all([
+      prisma.part.findMany({
+        where,
+        select: { id: true, sku: true, name: true, minStock: true }
+      }),
+      prisma.inventoryEvent.groupBy({
+        by: ['partId'],
+        where: partId ? { partId } : {},
+        _sum: { qtyDelta: true }
+      })
+    ]);
+
+    const stockMap = new Map(stockAggregates.map(s => [s.partId, s._sum.qtyDelta ?? 0]));
+
+    return parts
+      .map(p => ({ ...p, computedQuantity: stockMap.get(p.id) ?? 0 }))
+      .filter(p => p.computedQuantity > 0);
   }
 
-  /**
-   * Aggregate sales by day
-   */
-  private aggregateDailySales(salesHistory: any[]): number[] {
+  private aggregateDailySales(events: { createdAt: Date; qtyDelta: number }[]): number[] {
     const dailyMap = new Map<string, number>();
 
-    for (const sale of salesHistory) {
-      const dateKey = sale.createdAt.toISOString().split('T')[0];
+    for (const event of events) {
+      const dateKey = event.createdAt.toISOString().split('T')[0];
       const current = dailyMap.get(dateKey) || 0;
-      dailyMap.set(dateKey, current + Math.abs(sale.quantityChange));
+      dailyMap.set(dateKey, current + Math.abs(event.qtyDelta));
     }
 
-    // Fill in missing days with 0
-    const days = [];
-    const startDate = new Date(salesHistory[0].createdAt);
+    const days: number[] = [];
+    const startDate = new Date(events[0].createdAt);
     const endDate = new Date();
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -155,29 +159,19 @@ export class ForecastingService {
     return days;
   }
 
-  /**
-   * Calculate average of daily sales
-   */
   private calculateAverage(dailySales: number[]): number {
     if (dailySales.length === 0) return 0;
-    const sum = dailySales.reduce((a, b) => a + b, 0);
-    return sum / dailySales.length;
+    return dailySales.reduce((a, b) => a + b, 0) / dailySales.length;
   }
 
-  /**
-   * Calculate sales trend
-   */
   private calculateTrend(dailySales: number[]): 'increasing' | 'stable' | 'decreasing' {
     if (dailySales.length < 14) return 'stable';
 
-    // Compare last 2 weeks vs previous 2 weeks
     const midPoint = Math.floor(dailySales.length / 2);
-    const firstHalf = dailySales.slice(0, midPoint);
-    const secondHalf = dailySales.slice(midPoint);
+    const avgFirst = this.calculateAverage(dailySales.slice(0, midPoint));
+    const avgSecond = this.calculateAverage(dailySales.slice(midPoint));
 
-    const avgFirst = this.calculateAverage(firstHalf);
-    const avgSecond = this.calculateAverage(secondHalf);
-
+    if (avgFirst === 0) return 'stable';
     const changePercent = ((avgSecond - avgFirst) / avgFirst) * 100;
 
     if (changePercent > 15) return 'increasing';
@@ -185,157 +179,67 @@ export class ForecastingService {
     return 'stable';
   }
 
-  /**
-   * Calculate seasonal adjustment factor
-   */
-  private calculateSeasonalFactor(salesHistory: any[]): number {
+  private calculateSeasonalFactor(): number {
     const currentMonth = new Date().getMonth();
-
-    // Seasonal patterns for auto parts (simplified)
     const seasonalPatterns: SeasonalPattern[] = [
-      { month: 0, factor: 0.8 },  // January - slow
-      { month: 1, factor: 0.9 },  // February
-      { month: 2, factor: 1.0 },  // March
-      { month: 3, factor: 1.1 },  // April - spring repairs
-      { month: 4, factor: 1.2 },  // May
-      { month: 5, factor: 1.3 },  // June - summer driving
-      { month: 6, factor: 1.3 },  // July
-      { month: 7, factor: 1.2 },  // August
-      { month: 8, factor: 1.1 },  // September
-      { month: 9, factor: 1.0 },  // October
-      { month: 10, factor: 0.9 }, // November
-      { month: 11, factor: 0.8 }  // December - holidays slow
+      { month: 0, factor: 0.8 },
+      { month: 1, factor: 0.9 },
+      { month: 2, factor: 1.0 },
+      { month: 3, factor: 1.1 },
+      { month: 4, factor: 1.2 },
+      { month: 5, factor: 1.3 },
+      { month: 6, factor: 1.3 },
+      { month: 7, factor: 1.2 },
+      { month: 8, factor: 1.1 },
+      { month: 9, factor: 1.0 },
+      { month: 10, factor: 0.9 },
+      { month: 11, factor: 0.8 }
     ];
-
-    const pattern = seasonalPatterns.find(p => p.month === currentMonth);
-    return pattern ? pattern.factor : 1.0;
+    return seasonalPatterns.find(p => p.month === currentMonth)?.factor ?? 1.0;
   }
 
-  /**
-   * Calculate forecast confidence based on data consistency
-   */
   private calculateConfidence(dailySales: number[]): number {
     if (dailySales.length < 7) return this.MIN_CONFIDENCE;
-
     const avg = this.calculateAverage(dailySales);
     if (avg === 0) return this.MIN_CONFIDENCE;
 
-    // Calculate coefficient of variation
-    const variance = dailySales.reduce((sum, val) => {
-      const diff = val - avg;
-      return sum + (diff * diff);
-    }, 0) / dailySales.length;
-
-    const stdDev = Math.sqrt(variance);
-    const cv = stdDev / avg;
-
-    // Lower CV = more consistent = higher confidence
-    // CV of 0 = perfect consistency = 100% confidence
-    // CV of 1+ = high variability = 50% confidence
-    const confidence = Math.max(this.MIN_CONFIDENCE, Math.min(1, 1 - (cv / 2)));
-
-    return confidence;
+    const variance = dailySales.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / dailySales.length;
+    const cv = Math.sqrt(variance) / avg;
+    return Math.max(this.MIN_CONFIDENCE, Math.min(1, 1 - (cv / 2)));
   }
 
-  /**
-   * Get parts that need immediate reordering
-   */
   async getReorderAlerts(): Promise<ForecastResult[]> {
     const forecasts = await this.generateForecasts();
-
     return forecasts.filter(f =>
       f.currentStock <= f.reorderPoint ||
       f.daysUntilStockout <= this.LEAD_TIME_DAYS
     );
   }
 
-  /**
-   * Get seasonal demand patterns for a category
-   */
-  async getCategorySeasonalDemand(categoryId: number): Promise<any> {
-    const parts = await prisma.part.findMany({
-      where: { categoryId }
-    });
-
-    const monthlyDemand = new Array(12).fill(0);
-
-    for (const part of parts) {
-      const sales = await prisma.historyLog.findMany({
-        where: {
-          partId: part.id,
-          changeType: 'SALE',
-          createdAt: {
-            gte: new Date(new Date().setFullYear(new Date().getFullYear() - 1))
-          }
-        }
-      });
-
-      sales.forEach(sale => {
-        const month = sale.createdAt.getMonth();
-        monthlyDemand[month] += Math.abs(sale.quantityChange);
-      });
-    }
-
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-
-    return months.map((month, index) => ({
-      month,
-      demand: monthlyDemand[index]
-    }));
-  }
-
-  /**
-   * Get parts at risk of stockout within specified days
-   */
   async getStockoutRisk(days: number): Promise<ForecastResult[]> {
     const forecasts = await this.generateForecasts();
-    return forecasts.filter(f => f.daysUntilStockout <= days).sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
+    return forecasts.filter(f => f.daysUntilStockout <= days)
+      .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
   }
 
-  /**
-   * Get all seasonal demand patterns for dashboard
-   */
   async getAllSeasonalPatterns(): Promise<any[]> {
-    const categories = await prisma.category.findMany();
-    const patterns = [];
-
-    for (const category of categories) {
-      const demand = await this.getCategorySeasonalDemand(category.id);
-      patterns.push({
-        categoryId: category.id,
-        categoryName: category.name,
-        monthlyDemand: demand
-      });
-    }
-
-    return patterns;
+    // Category model not in schema — return empty
+    return [];
   }
 
-  /**
-   * Get dashboard summary with key metrics
-   */
   async getDashboardSummary(): Promise<any> {
     const forecasts = await this.generateForecasts();
     const critical = forecasts.filter(f => f.daysUntilStockout <= 7);
     const warning = forecasts.filter(f => f.daysUntilStockout > 7 && f.daysUntilStockout <= 30);
 
-    // Calculate average trend
     const increasing = forecasts.filter(f => f.trend === 'increasing').length;
     const decreasing = forecasts.filter(f => f.trend === 'decreasing').length;
     const stable = forecasts.filter(f => f.trend === 'stable').length;
 
-    // Calculate average confidence
     const avgConfidence = forecasts.length > 0
       ? forecasts.reduce((sum, f) => sum + f.confidence, 0) / forecasts.length
       : 0;
 
-    // Get total items at risk in next 30 days
-    const atRisk30Days = forecasts.filter(f => f.daysUntilStockout <= 30).length;
-
-    // Total reorder quantity needed
     const totalReorderQty = forecasts
       .filter(f => f.currentStock <= f.reorderPoint)
       .reduce((sum, f) => sum + f.reorderQuantity, 0);
@@ -344,68 +248,18 @@ export class ForecastingService {
       totalParts: forecasts.length,
       criticalParts: critical.length,
       warningParts: warning.length,
-      partsAtRisk30Days: atRisk30Days,
+      partsAtRisk30Days: forecasts.filter(f => f.daysUntilStockout <= 30).length,
       avgConfidence: Number(avgConfidence.toFixed(2)),
-      trendBreakdown: {
-        increasing,
-        stable,
-        decreasing
-      },
+      trendBreakdown: { increasing, stable, decreasing },
       totalReorderQtyNeeded: totalReorderQty,
       highestRiskParts: critical.slice(0, 5),
-      estimatedStockoutValue: critical.reduce((sum, f) => sum + (f.reorderQuantity * 50), 0) // Rough estimate
+      estimatedStockoutValue: critical.reduce((sum, f) => sum + (f.reorderQuantity * 50), 0)
     };
   }
 
-  /**
-   * Generate automated purchase orders based on forecasts
-   */
   async generatePurchaseOrders(): Promise<any[]> {
-    const reorderAlerts = await this.getReorderAlerts();
-    const orders: any[] = [];
-
-    // Group by supplier
-    const supplierGroups = new Map<number, ForecastResult[]>();
-
-    for (const alert of reorderAlerts) {
-      const part = await prisma.part.findUnique({
-        where: { id: alert.partId },
-        include: { supplier: true }
-      });
-
-      if (part?.supplierId) {
-        const group = supplierGroups.get(part.supplierId) || [];
-        group.push(alert);
-        supplierGroups.set(part.supplierId, group);
-      }
-    }
-
-    // Create purchase orders for each supplier
-    for (const [supplierId, parts] of supplierGroups) {
-      const supplier = await prisma.supplier.findUnique({
-        where: { id: supplierId }
-      });
-
-      if (supplier) {
-        const orderItems = parts.map(p => ({
-          partId: p.partId,
-          sku: p.sku,
-          name: p.name,
-          quantity: p.reorderQuantity,
-          reorderReason: `Stock at ${p.currentStock}, ${p.daysUntilStockout} days until stockout`
-        }));
-
-        orders.push({
-          supplierId,
-          supplierName: supplier.name,
-          items: orderItems,
-          totalItems: orderItems.length,
-          estimatedDelivery: new Date(Date.now() + this.LEAD_TIME_DAYS * 24 * 60 * 60 * 1000)
-        });
-      }
-    }
-
-    return orders;
+    // Supplier model not in schema — return empty
+    return [];
   }
 }
 

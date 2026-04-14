@@ -350,12 +350,12 @@ export async function getAllPartsForExport() {
     select: {
       id: true, sku: true, name: true, description: true, condition: true,
       minStock: true, costCents: true, createdAt: true,
-      inventoryEvents: { select: { quantity: true } },
+      inventoryEvents: { select: { qtyDelta: true } },
     },
     orderBy: { sku: 'asc' },
   });
   return parts.map(p => ({
     ...p,
-    onHand: p.inventoryEvents.reduce((sum: number, e: { quantity: number }) => sum + e.quantity, 0),
+    onHand: p.inventoryEvents.reduce((sum: number, e: { qtyDelta: number }) => sum + e.qtyDelta, 0),
   }));
 }

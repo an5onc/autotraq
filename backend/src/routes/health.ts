@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticate, requireRoles } from '../middleware/auth.middleware';
+import { PrismaClient, InventoryEventType } from '@prisma/client';
+import { authenticate } from '../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -27,77 +28,64 @@ interface HealthMetrics {
   }[];
 }
 
-// Get inventory health metrics
-router.get('/dashboard', authenticate, async (req, res) => {
-  try {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+// Compute stock per part from inventory events
+async function getStockByPart(): Promise<Map<number, number>> {
+  const aggregates = await prisma.inventoryEvent.groupBy({
+    by: ['partId'],
+    _sum: { qtyDelta: true }
+  });
+  return new Map(aggregates.map(r => [r.partId, r._sum.qtyDelta ?? 0]));
+}
 
+// Get inventory health metrics
+router.get('/dashboard', authenticate, async (_req: AuthenticatedRequest, res) => {
+  try {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // Get all parts with recent activity
-    const parts = await prisma.part.findMany({
-      include: {
-        movements: {
-          where: {
-            createdAt: {
-              gte: ninetyDaysAgo
-            }
-          }
-        },
-        audits: {
-          where: {
-            createdAt: {
-              gte: thirtyDaysAgo
-            }
-          }
-        }
-      }
-    });
+    const [parts, stockMap, recentOutEvents, recentInEvents] = await Promise.all([
+      prisma.part.findMany({ select: { id: true, minStock: true } }),
+      getStockByPart(),
+      // Outbound events (fulfillments) in last 90 days
+      prisma.inventoryEvent.findMany({
+        where: { type: InventoryEventType.FULFILL, createdAt: { gte: ninetyDaysAgo } },
+        select: { partId: true }
+      }),
+      // Inbound events in last 90 days
+      prisma.inventoryEvent.findMany({
+        where: { type: InventoryEventType.RECEIVE, createdAt: { gte: ninetyDaysAgo } },
+        select: { partId: true }
+      })
+    ]);
 
-    // Calculate stock accuracy (based on audits)
-    const auditedParts = parts.filter(p => p.audits.length > 0);
-    const accurateAudits = auditedParts.filter(p => {
-      const lastAudit = p.audits[p.audits.length - 1];
-      return Math.abs(lastAudit.countedQuantity - lastAudit.systemQuantity) <= 2;
-    });
-    const stockAccuracy = auditedParts.length > 0
-      ? (accurateAudits.length / auditedParts.length) * 100
-      : 100;
+    const outPartIds = new Set(recentOutEvents.map(e => e.partId));
+    const inPartIds = new Set(recentInEvents.map(e => e.partId));
 
-    // Calculate turnover rate
-    const totalMovements = parts.reduce((sum, p) => sum + p.movements.filter(m => m.type === 'OUT').length, 0);
-    const averageStock = parts.reduce((sum, p) => sum + p.quantity, 0) / parts.length;
-    const turnoverRate = averageStock > 0 ? (totalMovements / averageStock) * 12 : 0; // Annualized
+    // Turnover: parts with outbound activity / total parts
+    const turnoverRate = parts.length > 0
+      ? (outPartIds.size / parts.length) * 12 // Annualized
+      : 0;
 
-    // Calculate dead stock percentage
+    // Dead stock: parts with stock > 0 but no outbound activity in 90 days
     const deadStockParts = parts.filter(p => {
-      const outMovements = p.movements.filter(m => m.type === 'OUT');
-      return outMovements.length === 0 && p.quantity > 0;
+      const qty = stockMap.get(p.id) ?? 0;
+      return qty > 0 && !outPartIds.has(p.id);
     });
     const deadStockPercentage = parts.length > 0
       ? (deadStockParts.length / parts.length) * 100
       : 0;
 
-    // Calculate reorder compliance
-    const belowReorderParts = parts.filter(p => p.quantity <= p.reorderPoint);
-    const orderedParts = belowReorderParts.filter(p => {
-      const recentOrders = p.movements.filter(m =>
-        m.type === 'IN' &&
-        m.createdAt >= thirtyDaysAgo
-      );
-      return recentOrders.length > 0;
-    });
-    const reorderCompliance = belowReorderParts.length > 0
-      ? (orderedParts.length / belowReorderParts.length) * 100
+    // Reorder compliance: parts below minStock that received stock
+    const belowMinStock = parts.filter(p => (stockMap.get(p.id) ?? 0) <= p.minStock);
+    const compliantReorders = belowMinStock.filter(p => inPartIds.has(p.id));
+    const reorderCompliance = belowMinStock.length > 0
+      ? (compliantReorders.length / belowMinStock.length) * 100
       : 100;
 
-    // Calculate audit frequency score
-    const partsWithRecentAudits = parts.filter(p => p.audits.length > 0);
-    const auditFrequency = (partsWithRecentAudits.length / parts.length) * 100;
+    // No audit model — default to 100
+    const stockAccuracy = 100;
+    const auditFrequency = 100;
 
-    // Calculate overall health score
     const overallScore = Math.round(
       (stockAccuracy * 0.25) +
       (Math.min(turnoverRate * 10, 100) * 0.20) +
@@ -106,16 +94,12 @@ router.get('/dashboard', authenticate, async (req, res) => {
       (auditFrequency * 0.15)
     );
 
-    // Identify issues
     const issues = {
       critical: [] as string[],
       warnings: [] as string[],
       suggestions: [] as string[]
     };
 
-    if (stockAccuracy < 90) {
-      issues.critical.push(`Stock accuracy is ${stockAccuracy.toFixed(1)}% - conduct full inventory audit`);
-    }
     if (deadStockPercentage > 20) {
       issues.critical.push(`${deadStockPercentage.toFixed(1)}% of inventory is dead stock`);
     }
@@ -125,29 +109,25 @@ router.get('/dashboard', authenticate, async (req, res) => {
     if (turnoverRate < 4) {
       issues.warnings.push('Low inventory turnover rate - review stocking levels');
     }
-    if (auditFrequency < 50) {
-      issues.suggestions.push('Increase audit frequency for better accuracy');
-    }
 
-    // Calculate trends (mock data for now)
     const trends = [
-      {
-        label: 'Stock Accuracy',
-        direction: stockAccuracy > 95 ? 'up' as const : stockAccuracy < 90 ? 'down' as const : 'stable' as const,
-        value: stockAccuracy,
-        change: Math.random() * 10 - 5
-      },
       {
         label: 'Turnover Rate',
         direction: turnoverRate > 6 ? 'up' as const : turnoverRate < 4 ? 'down' as const : 'stable' as const,
         value: turnoverRate,
-        change: Math.random() * 2 - 1
+        change: 0
       },
       {
         label: 'Dead Stock',
         direction: deadStockPercentage < 10 ? 'down' as const : deadStockPercentage > 20 ? 'up' as const : 'stable' as const,
         value: deadStockPercentage,
-        change: Math.random() * 5 - 2.5
+        change: 0
+      },
+      {
+        label: 'Reorder Compliance',
+        direction: reorderCompliance > 90 ? 'up' as const : reorderCompliance < 70 ? 'down' as const : 'stable' as const,
+        value: reorderCompliance,
+        change: 0
       }
     ];
 
@@ -172,65 +152,38 @@ router.get('/dashboard', authenticate, async (req, res) => {
 });
 
 // Get parts needing attention
-router.get('/alerts', authenticate, async (req, res) => {
+router.get('/alerts', authenticate, async (_req: AuthenticatedRequest, res) => {
   try {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // Find parts below reorder point
-    const lowStockParts = await prisma.part.findMany({
-      where: {
-        quantity: {
-          lte: prisma.part.fields.reorderPoint
-        }
-      },
-      orderBy: {
-        quantity: 'asc'
-      },
-      take: 10
-    });
+    const [parts, stockMap, recentOutPartIds] = await Promise.all([
+      prisma.part.findMany({ select: { id: true, sku: true, name: true, minStock: true } }),
+      getStockByPart(),
+      prisma.inventoryEvent.findMany({
+        where: { type: InventoryEventType.FULFILL, createdAt: { gte: ninetyDaysAgo } },
+        select: { partId: true }
+      }).then(rows => new Set(rows.map(r => r.partId)))
+    ]);
 
-    // Find dead stock
-    const deadStockParts = await prisma.part.findMany({
-      where: {
-        quantity: {
-          gt: 0
-        },
-        movements: {
-          none: {
-            type: 'OUT',
-            createdAt: {
-              gte: ninetyDaysAgo
-            }
-          }
-        }
-      },
-      orderBy: {
-        quantity: 'desc'
-      },
-      take: 10
-    });
+    // Low stock: quantity <= minStock
+    const lowStockParts = parts
+      .map(p => ({ ...p, stockOnHand: stockMap.get(p.id) ?? 0 }))
+      .filter(p => p.stockOnHand <= p.minStock)
+      .sort((a, b) => a.stockOnHand - b.stockOnHand)
+      .slice(0, 10);
 
-    // Find parts never audited
-    const unauditedParts = await prisma.part.findMany({
-      where: {
-        audits: {
-          none: {}
-        },
-        quantity: {
-          gt: 0
-        }
-      },
-      orderBy: {
-        quantity: 'desc'
-      },
-      take: 10
-    });
+    // Dead stock: quantity > 0, no outbound in 90 days
+    const deadStockParts = parts
+      .map(p => ({ ...p, stockOnHand: stockMap.get(p.id) ?? 0 }))
+      .filter(p => p.stockOnHand > 0 && !recentOutPartIds.has(p.id))
+      .sort((a, b) => b.stockOnHand - a.stockOnHand)
+      .slice(0, 10);
 
     res.json({
       lowStock: lowStockParts,
       deadStock: deadStockParts,
-      needsAudit: unauditedParts,
+      needsAudit: [],
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -239,21 +192,19 @@ router.get('/alerts', authenticate, async (req, res) => {
   }
 });
 
-// Get health score history
-router.get('/history', authenticate, async (req, res) => {
+// Get health score history (mock - no stored metrics)
+router.get('/history', authenticate, async (_req: AuthenticatedRequest, res) => {
   try {
-    // Generate mock historical data (in production, this would come from stored metrics)
     const history = [];
     const today = new Date();
 
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-
       history.push({
         date: date.toISOString().split('T')[0],
         overallScore: 75 + Math.random() * 20,
-        stockAccuracy: 85 + Math.random() * 15,
+        stockAccuracy: 100,
         turnoverRate: 4 + Math.random() * 4,
         deadStockPercentage: 10 + Math.random() * 15
       });

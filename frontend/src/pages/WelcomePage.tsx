@@ -55,9 +55,9 @@ const features = [
 
 const teamMembers = [
   { name: 'Anson Cordeiro', role: 'Lead Developer & Architect', initials: 'AC' },
-  { name: 'Agustus Allred', role: 'Backend Developer', initials: 'DC' },
+  { name: 'Agustus Allred', role: 'Backend Developer', initials: 'AA' },
   { name: 'Ben Scarlett', role: 'Frontend Developer', initials: 'BS' },
-  { name: 'Dean Carothers', role: 'Database & DevOps', initials: 'EH' },
+  { name: 'Dean Carothers', role: 'Database & DevOps', initials: 'DC' },
   { name: 'Fatima Cortez', role: 'Frontend & Data Visualization Developer', initials: 'FC' },
 ];
 

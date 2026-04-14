@@ -54,8 +54,11 @@ const features = [
 ];
 
 const teamMembers = [
-  { name: 'Anson Callahan', role: 'Lead Developer & Architect', initials: 'AC' },
-  { name: 'Jim Doran', role: 'Faculty Advisor', initials: 'JD' },
+  { name: 'Anson Cordeiro', role: 'Lead Developer & Architect', initials: 'AC' },
+  { name: 'Agustus Allred', role: 'Backend Developer', initials: 'DC' },
+  { name: 'Ben Scarlett', role: 'Frontend Developer', initials: 'BS' },
+  { name: 'Dean Carothers', role: 'Database & DevOps', initials: 'EH' },
+  { name: 'Fatima Cortez', role: 'Frontend & Data Visualization Developer', initials: 'FC' },
 ];
 
 const techStack = [

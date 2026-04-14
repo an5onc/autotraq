@@ -222,6 +222,11 @@ export class ForecastingService {
       .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
   }
 
+  async getCategorySeasonalDemand(_categoryId: number): Promise<any[]> {
+    // Category model not in schema — return empty
+    return [];
+  }
+
   async getAllSeasonalPatterns(): Promise<any[]> {
     // Category model not in schema — return empty
     return [];

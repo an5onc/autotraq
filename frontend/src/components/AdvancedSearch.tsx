@@ -1,6 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, Filter, X, ChevronDown, Package } from 'lucide-react';
-import { debounce } from 'lodash';
+const debounce = <T extends (...args: unknown[]) => void>(fn: T, delay: number) => {
+  let timer: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+};
 
 interface SearchFilters {
   query: string;

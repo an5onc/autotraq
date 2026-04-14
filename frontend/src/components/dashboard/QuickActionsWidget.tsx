@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Package,
   Plus,
-  BarcodeScan,
+  BarcodeIcon,
   Search,
   FileText,
   Users,
@@ -40,7 +40,7 @@ const QuickActionsWidget: React.FC = () => {
       id: 'scan-barcode',
       title: 'Scan Barcode',
       description: 'Scan part or location',
-      icon: <BarcodeScan className="w-5 h-5" />,
+      icon: <BarcodeIcon className="w-5 h-5" />,
       color: 'bg-green-500 hover:bg-green-600',
       path: '/scan',
       hotkey: 'Alt+S',

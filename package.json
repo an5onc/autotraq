@@ -12,9 +12,11 @@
     "db:studio": "npm run db:studio --prefix backend"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "prisma": "^6.19.3"
   },
   "dependencies": {
+    "@prisma/client": "^7.7.0",
     "docx": "^9.6.1"
   }
 }

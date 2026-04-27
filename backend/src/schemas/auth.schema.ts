@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
-// Self-registration (MVP test flow supports admin creation)
+// Self-registration is limited to non-privileged roles.
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(1, 'Name is required').max(100),
-  role: z.enum(['admin', 'manager', 'fulfillment', 'viewer']).optional(),
+  role: z.enum(['fulfillment', 'viewer']).optional(),
 });
 
 // Admin creating users (can set any role including admin)

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import bcrypt from 'bcrypt';
 import app from '../../src/index.js';
 import prisma from '../../src/repositories/prisma.js';
 
@@ -50,20 +51,19 @@ describe('MVP Workflow Integration Test', () => {
     await prisma.$disconnect();
   });
 
-  it('1) Register admin user', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({
+  it('1) Seed admin user', async () => {
+    const password = await bcrypt.hash('password123', 10);
+    const user = await prisma.user.create({
+      data: {
         email: 'admin@test.com',
-        password: 'password123',
+        password,
         name: 'Test Admin',
         role: 'admin',
-      });
+      },
+    });
 
-    expect(res.status).toBe(201);
-    expect(res.body.data.user.email).toBe('admin@test.com');
-    expect(res.body.data.user.role).toBe('admin');
-    expect(res.body.data.token).toBeDefined();
+    expect(user.email).toBe('admin@test.com');
+    expect(user.role).toBe('admin');
   });
 
   it('2) Login and get JWT', async () => {

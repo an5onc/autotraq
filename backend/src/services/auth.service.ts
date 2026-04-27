@@ -8,8 +8,9 @@ function generateShortBarcode(): string {
 import prisma from '../repositories/prisma.js';
 import { RegisterInput, AdminCreateUserInput, LoginInput } from '../schemas/auth.schema.js';
 import { JwtPayload } from '../middleware/auth.middleware.js';
+import { getJwtSecret } from '../config/env.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = getJwtSecret();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const SALT_ROUNDS = 10;
 const MAX_ADMINS = 4;
@@ -33,7 +34,7 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
     throw new Error('Email already registered');
   }
 
-  const role = input.role || 'viewer';
+  const role = input.role === 'fulfillment' ? 'fulfillment' : 'viewer';
 
   const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
   const user = await prisma.user.create({

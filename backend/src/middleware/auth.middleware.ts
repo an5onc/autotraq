@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { unauthorized, forbidden } from '../utils/response.js';
+import { getJwtSecret } from '../config/env.js';
 
 export interface JwtPayload {
   userId: number;
@@ -14,7 +15,7 @@ export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = getJwtSecret();
 
 /**
  * Middleware to verify JWT token and attach user to request

@@ -78,6 +78,22 @@ export function PartsPage() {
   const [skuBarcode, setSkuBarcode] = useState('');
   const [barcodeModal, setBarcodeModal] = useState<{ sku: string; barcode: string } | null>(null);
 
+  const handleDownloadReport = async () => {
+    try {
+      const blob = await api.downloadReport('inventory');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `autotraq-inventory-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to download report');
+    }
+  };
+
   const [partVehicleYear, setPartVehicleYear] = useState<number | ''>('');
   const [partVehicleMake, setPartVehicleMake] = useState('');
   const [partVehicleId, setPartVehicleId] = useState<number | ''>('');
@@ -576,14 +592,13 @@ export function PartsPage() {
               <Info className="w-4 h-4" /> Grade Guide
             </button>
 
-            <a
-              href={api.getReportUrl('inventory')}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={handleDownloadReport}
               className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors whitespace-nowrap"
             >
               <FileText className="w-4 h-4" /> PDF Report
-            </a>
+            </button>
           </div>
 
           {/* Advanced Filters Panel */}

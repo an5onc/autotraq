@@ -167,6 +167,18 @@ class ApiClient {
     return `${API_BASE}/reports/${type}.pdf`;
   }
 
+  async downloadReport(type: 'inventory' | 'low-stock') {
+    const response = await fetch(this.getReportUrl(type), {
+      headers: this.getToken() ? { Authorization: `Bearer ${this.getToken()}` } : {},
+    });
+
+    if (!response.ok) {
+      throw new Error('Report download failed');
+    }
+
+    return response.blob();
+  }
+
   async createPart(sku: string, name: string, description?: string, condition?: PartCondition, minStock?: number, costCents?: number | null) {
     return this.request<Part>('/parts', {
       method: 'POST',

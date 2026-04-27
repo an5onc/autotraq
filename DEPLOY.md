@@ -38,6 +38,8 @@ Railway runs two services from this monorepo:
 |----------|-------|
 | `DATABASE_URL` | Copy from the MySQL service's `MYSQL_URL` (or use Railway's variable reference: `${{MySQL.MYSQL_URL}}`) |
 | `JWT_SECRET` | Generate a random string (`openssl rand -hex 32`) |
+| `FRONTEND_URL` | Your frontend URL, e.g. `https://cs490unco.org` |
+| `ENABLE_STARTUP_SEED` | Optional. Set to `true` only for a fresh demo database that needs seed accounts. |
 | `PORT` | Leave unset — Railway injects this automatically |
 | `NODE_ENV` | `production` |
 
@@ -45,7 +47,7 @@ Railway runs two services from this monorepo:
 
 Per `railway.json`:
 - **Build:** `npm install` → `prisma generate` → `tsc`
-- **Start:** `prisma db push --accept-data-loss` → `node dist/index.js`
+- **Start:** `prisma db push` → `node dist/index.js`
 
 This auto-applies schema changes to the database on every deploy.
 

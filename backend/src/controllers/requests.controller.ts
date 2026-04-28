@@ -6,6 +6,26 @@ import * as scanHistoryService from '../services/scanHistory.service.js';
 import { CreateRequestInput, RequestsQuery } from '../schemas/requests.schema.js';
 import { success, created, validationError, notFound, serverError } from '../utils/response.js';
 
+type RequestAuditInput = {
+  createdBy: number;
+  items: Array<{
+    partId: number;
+    locationId: number | null;
+    qtyRequested: number;
+  }>;
+};
+
+function getRequestAuditDetails(request: RequestAuditInput) {
+  return {
+    createdBy: request.createdBy,
+    items: request.items.map((item) => ({
+      partId: item.partId,
+      locationId: item.locationId,
+      qty: item.qtyRequested,
+    })),
+  };
+}
+
 export async function createRequest(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) {
@@ -24,7 +44,7 @@ export async function createRequest(req: AuthenticatedRequest, res: Response) {
         entityName: `${request.notes}`,
         userId: req.user.userId,
         userName: req.user.name,
-        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity  },
+        details: getRequestAuditDetails(request),
         ipAddress: req.ip,
       });
     }
@@ -84,7 +104,7 @@ export async function approveRequest(req: AuthenticatedRequest, res: Response) {
         entityName: `${request.notes}`,
         userId: req.user.userId,
         userName: req.user.name,
-        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        details: getRequestAuditDetails(request),
         ipAddress: req.ip,
       });
     }
@@ -124,7 +144,7 @@ export async function fulfillRequest(req: AuthenticatedRequest, res: Response) {
         entityName: `${request.notes}`,
         userId: req.user.userId,
         userName: req.user.name,
-        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        details: getRequestAuditDetails(request),
         ipAddress: req.ip,
       });
     }
@@ -168,7 +188,7 @@ export async function cancelRequest(req: AuthenticatedRequest, res: Response) {
         entityName: `${request.notes}`,
         userId: req.user.userId,
         userName: req.user.name,
-        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        details: getRequestAuditDetails(request),
         ipAddress: req.ip,
       });
     }

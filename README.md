@@ -145,7 +145,7 @@ See **[docs/api.md](./docs/api.md)** for the full API reference.
 
 ## 👥 Team
 
-Built by the AutoTraQ team — Georgetown High School, 2025–2026.
+Built by the AutoTraQ team — University of Northern Colorado, 2025–2026.
 
 ---
 

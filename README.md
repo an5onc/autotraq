@@ -1,8 +1,32 @@
 # 🚗 AutoTraQ
 
 **Automotive Parts Inventory & Tracking System**
+**CS 490 Senior Capstone · University of Northern Colorado · Spring 2026**
 
 AutoTraQ is a full-stack web application for managing automotive parts inventory, tracking stock movements, fulfilling requests, and generating barcodes — built for real-world warehouse workflows.
+
+🌐 **Live deployment:** https://cs490unco.org
+
+---
+
+## 📍 If you're the professor — start here
+
+All graded deliverables are PDFs in the **[`submission/`](./submission/)** folder. Open **[`submission/README.md`](./submission/README.md)** for the full map of what's where.
+
+The rest of this file is for developers and teammates.
+
+---
+
+## 🗂 Top-level layout
+
+| Folder | What it is |
+|--------|-----------|
+| **[`submission/`](./submission/)** | All graded deliverables, in PDF (pitch decks, project plan, per-module write-ups, cheat sheets, testing artifacts, dev process docs, API reference, deployment guide, client onboarding). |
+| [`source-documents/`](./source-documents/) | Editable originals of the submission PDFs (Word, PowerPoint, Excel, Markdown). |
+| [`archive/`](./archive/) | Reference material kept with the project but not part of the submission (syllabus, DB dump, prototype scripts, exploratory D3 stubs). |
+| `backend/` | Express + TypeScript + Prisma API server. |
+| `frontend/` | React + Vite + TypeScript single-page app. |
+| `DEPLOY.md` | Railway deployment guide (also included as a PDF in `submission/08-deployment/`). |
 
 ---
 

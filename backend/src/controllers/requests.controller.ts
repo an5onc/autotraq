@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import * as requestsService from '../services/requests.service.js';
+import * as auditService from '../services/audit.service.js';
 import * as scanHistoryService from '../services/scanHistory.service.js';
 import { CreateRequestInput, RequestsQuery } from '../schemas/requests.schema.js';
 import { success, created, validationError, notFound, serverError } from '../utils/response.js';
@@ -13,6 +14,21 @@ export async function createRequest(req: AuthenticatedRequest, res: Response) {
     }
     const input: CreateRequestInput = req.body;
     const request = await requestsService.createRequest(input, req.user.userId);
+    
+    // Audit log
+    if (req.user) {
+      auditService.log({
+        action: auditService.AuditActions.CREATE,
+        entityType: 'Request',
+        entityId: request.id,
+        entityName: `${request.notes}`,
+        userId: req.user.userId,
+        userName: req.user.name,
+        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity  },
+        ipAddress: req.ip,
+      });
+    }
+    
     created(res, request);
   } catch (err) {
     if (err instanceof Error && err.message.includes('Part with ID')) {
@@ -58,6 +74,21 @@ export async function approveRequest(req: AuthenticatedRequest, res: Response) {
     }
     const id = parseInt(req.params.id, 10);
     const request = await requestsService.approveRequest(id, req.user.userId);
+    
+    // Audit log
+    if (req.user) {
+      auditService.log({
+        action: auditService.AuditActions.APPROVE,
+        entityType: 'Request',
+        entityId: request.id,
+        entityName: `${request.notes}`,
+        userId: req.user.userId,
+        userName: req.user.name,
+        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        ipAddress: req.ip,
+      });
+    }
+    
     success(res, request);
   } catch (err) {
     if (err instanceof Error) {
@@ -83,6 +114,21 @@ export async function fulfillRequest(req: AuthenticatedRequest, res: Response) {
     }
     const id = parseInt(req.params.id, 10);
     const request = await requestsService.fulfillRequest(id, req.user.userId);
+    
+    // Audit log
+    if (req.user) {
+      auditService.log({
+        action: auditService.AuditActions.FULFILL,
+        entityType: 'Request',
+        entityId: request.id,
+        entityName: `${request.notes}`,
+        userId: req.user.userId,
+        userName: req.user.name,
+        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        ipAddress: req.ip,
+      });
+    }
+
     success(res, request);
   } catch (err) {
     if (err instanceof Error) {
@@ -112,6 +158,21 @@ export async function cancelRequest(req: AuthenticatedRequest, res: Response) {
     }
     const id = parseInt(req.params.id, 10);
     const request = await requestsService.cancelRequest(id, req.user.userId);
+    
+    // Audit log
+    if (req.user) {
+      auditService.log({
+        action: auditService.AuditActions.CANCEL,
+        entityType: 'Request',
+        entityId: request.id,
+        entityName: `${request.notes}`,
+        userId: req.user.userId,
+        userName: req.user.name,
+        details: { createdBy: request.createdBy, location: request.items.locationId, qty: request.items.quantity},
+        ipAddress: req.ip,
+      });
+    }
+
     success(res, request);
   } catch (err) {
     if (err instanceof Error) {

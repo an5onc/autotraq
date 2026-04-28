@@ -18,9 +18,13 @@ export function getFrontendOrigins(): string[] {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  if (process.env.NODE_ENV === 'production') {
+    origins.push('app://autotraq');
+  }
+
   if (process.env.NODE_ENV === 'production' && origins.length === 0) {
     throw new Error('FRONTEND_URL is required in production');
   }
 
-  return origins;
+  return [...new Set(origins)];
 }
